@@ -1,25 +1,16 @@
-### PROJECT #####################################################################
-# Videos
-*.mp4
-# Dirs
-__data__
-_other_
-.typings
-# Mujoco
-MUJOCO_LOG.TXT
-# DrawIo
-*.bkp
-ariel_header.svg
-### PYTHON ######################################################################
+### CURRENT ###################################################################
+# Output folder
+__data__/
+### PYTHON ####################################################################
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*py.class
+*$py.class
 # C extensions
 *.so
 # Distribution / packaging
 .Python
-# build/
+build/
 develop-eggs/
 dist/
 downloads/
@@ -92,10 +83,13 @@ ipython_config.py
 #   having no cross-platform support, pipenv may install dependencies that don't work, or not
 #   install all needed dependencies.
 #Pipfile.lock
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+# UV
+#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
+#uv.lock
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 #poetry.lock
 # pdm
@@ -145,14 +139,11 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-### VSCODE ######################################################################
-.vscode
-.vscode/*
-# Local History for Visual Studio Code
-.history/
-# Built Visual Studio Code Extensions
-*.vsix
-### LINUX ######################################################################
+# Ruff stuff:
+.ruff_cache/
+# PyPI configuration file
+.pypirc
+### LINUX ####################################################################
 *~
 # temporary files which can be created if a process still has a handle open of a deleted file
 .fuse_hidden*
@@ -162,7 +153,7 @@ cython_debug/
 .Trash-*
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
-### MACOS ######################################################################
+### MACOS ####################################################################
 # General
 .DS_Store
 .AppleDouble
@@ -185,10 +176,20 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
-### IMAGES #####################################################################
+### VSC ####################################################################
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+# Local History for Visual Studio Code
+.history/
+# Built Visual Studio Code Extensions
+*.vsix
+### IMAGES ####################################################################
 # JPEG
 *.jpg
-*.JPG
 *.jpeg
 *.jpe
 *.jif
@@ -223,7 +224,6 @@ Temporary Items
 # Scalable Vector Graphics
 *.svg
 *.svgz
-!ariel_header.svg
 # Portable Document Format
 *.pdf
 # X BitMap
@@ -236,31 +236,5 @@ Temporary Items
 # 3D Images
 *.3dm
 *.max
-### VSCODE ####################################################################
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
-### WINDOWS ####################################################################
-# Windows thumbnail cache files
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-# Dump file
-*.stackdump
-# Folder config file
-[Dd]esktop.ini
-# Recycle Bin used on file shares
-RECYCLE.BIN/
-# Windows Installer files
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
-# Windows shortcuts
-*.lnk
 
 .direnv
