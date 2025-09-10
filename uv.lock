@@ -40,8 +40,8 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "cmaes" },
-    { name = "fast-perlin-noise" },
     { name = "matplotlib" },
+    { name = "mesa" },
     { name = "mujoco" },
     { name = "mypy" },
     { name = "networkx" },
@@ -68,8 +68,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cmaes", specifier = ">=0.11.1" },
-    { name = "fast-perlin-noise", specifier = ">=1.1.2" },
     { name = "matplotlib", specifier = ">=3.10.3" },
+    { name = "mesa", specifier = ">=3.3.0" },
     { name = "mujoco", specifier = ">=3.3.4" },
     { name = "mypy", specifier = ">=1.17.0" },
     { name = "networkx", specifier = ">=3.5" },
@@ -114,6 +114,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/81/30/c72190aa569dc274642a9a935ac32a9f6697a635d297705ad7c654503e68/bayesian-optimization-1.4.0.tar.gz", hash = "sha256:5e7b5ada7826a8a342932d67f8ae5e638ade588a12b7f7df058fb7a2defe5866", size = 19792, upload-time = "2022-11-27T23:41:31.87Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2c/af/478deae10abb1cc1034993064b41dbc6015734b4f8cafa2c3d1a05861f75/bayesian_optimization-1.4.0-py3-none-any.whl", hash = "sha256:0984cfcbc9472284778962416f0d4892286da3f54e1df2767ef89263b6e22263", size = 17895, upload-time = "2022-11-27T23:41:29.669Z" },
+]
+
+[[package]]
+name = "beniget"
+version = "0.4.2.post1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "gast" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2e/27/5bb01af8f2860d431b98d0721b96ff2cea979106cae3f2d093ec74f6400c/beniget-0.4.2.post1.tar.gz", hash = "sha256:a0258537e65e7e14ec33a86802f865a667f949bb6c73646d55e42f7c45a052ae", size = 32274, upload-time = "2024-06-28T10:20:05.708Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/44/e4/6e8731d4d10dd09942a6f5015b2148ae612bf13e49629f33f9fade3c8253/beniget-0.4.2.post1-py3-none-any.whl", hash = "sha256:e1b336e7b5f2ae201e6cc21f533486669f1b9eccba018dcff5969cd52f1c20ba", size = 17242, upload-time = "2024-06-28T10:20:03.197Z" },
 ]
 
 [[package]]
@@ -299,22 +311,6 @@ epath = [
 ]
 
 [[package]]
-name = "fast-perlin-noise"
-version = "1.1.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-    { name = "strenum" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/03/7f/d1a1e2cf97f34d2ae03ca0396460522f93df487640a8b6a1b91140e2da96/fast_perlin_noise-1.1.2.tar.gz", hash = "sha256:d94a2e6f13b9841e328b1aebc2dbee28ebc71289562a31ea002fe058aac1ac95", size = 96292, upload-time = "2025-01-07T21:30:59.726Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8e/6f/4a1b82e8ba36c09864b0d3ad7781938bb4f4622663a2aca26d3ff876bc7f/fast_perlin_noise-1.1.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:530897c34efbd25c2d93a582d71f1e8c6f9c7882b730151e1cc6b1d88a9c142d", size = 788942, upload-time = "2025-01-07T21:32:23.843Z" },
-    { url = "https://files.pythonhosted.org/packages/ef/a5/dc9e35c16d31acd105f57d7ca888aeb9407d8a0c690a2087998af7b079e2/fast_perlin_noise-1.1.2-cp312-cp312-win_amd64.whl", hash = "sha256:204f5679e67213f38aa164584dc00e2c8c050c52d3d27cf698fcdd174093dc2c", size = 814389, upload-time = "2025-01-07T21:35:10.769Z" },
-    { url = "https://files.pythonhosted.org/packages/cf/24/0649b4a17c9fdb0705cab4a95516b240e95bcbf71b1776e3bdda19916cf0/fast_perlin_noise-1.1.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:ae3b0ea5ba1161baaed179bb2b679b0318d4a95e336be632390ba6cd281c244d", size = 788944, upload-time = "2025-01-07T21:32:26.531Z" },
-    { url = "https://files.pythonhosted.org/packages/bf/a9/b45babe50c9938343f115410e51b54a0ded7ab3a45a0fae46c796644cd5d/fast_perlin_noise-1.1.2-cp313-cp313-win_amd64.whl", hash = "sha256:59c0b798aa08cb2d6ee014347292517ca27b59289257ef5d35952f95246298cb", size = 814246, upload-time = "2025-01-07T21:35:14.356Z" },
-]
-
-[[package]]
 name = "fonttools"
 version = "4.59.0"
 source = { registry = "https://pypi.org/simple" }
@@ -346,6 +342,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/8b/02/0835e6ab9cfc03916fe3f78c0956cfcdb6ff2669ffa6651065d5ebf7fc98/fsspec-2025.7.0.tar.gz", hash = "sha256:786120687ffa54b8283d942929540d8bc5ccfa820deb555a2b5d0ed2b737bf58", size = 304432, upload-time = "2025-07-15T16:05:21.19Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2f/e0/014d5d9d7a4564cf1c40b5039bc882db69fd881111e03ab3657ac0b218e2/fsspec-2025.7.0-py3-none-any.whl", hash = "sha256:8b012e39f63c7d5f10474de957f3ab793b47b45ae7d39f2fb735f8bbe25c0e21", size = 199597, upload-time = "2025-07-15T16:05:19.529Z" },
+]
+
+[[package]]
+name = "gast"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3c/14/c566f5ca00c115db7725263408ff952b8ae6d6a4e792ef9c84e77d9af7a1/gast-0.6.0.tar.gz", hash = "sha256:88fc5300d32c7ac6ca7b515310862f71e6fdf2c029bbec7c66c0f5dd47b6b1fb", size = 27708, upload-time = "2024-06-27T20:31:49.527Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/61/8001b38461d751cd1a0c3a6ae84346796a5758123f3ed97a1b121dfbf4f3/gast-0.6.0-py3-none-any.whl", hash = "sha256:52b182313f7330389f72b069ba00f174cfe2a06411099547288839c6cbafbd54", size = 21173, upload-time = "2024-07-09T13:15:15.615Z" },
 ]
 
 [[package]]
@@ -693,6 +698,22 @@ wheels = [
 ]
 
 [[package]]
+name = "mesa"
+version = "3.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "pythran", marker = "sys_platform == 'darwin'" },
+    { name = "scipy" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d6/95/d56a50fee2b6c7c3c371a96164feb49982a5ac0c64d7990d640480946f92/mesa-3.3.0.tar.gz", hash = "sha256:49b4945a03b88a063d85e6c2674498dff5ee8ed6ef08fcf465370dce75f71722", size = 675585, upload-time = "2025-09-06T20:14:46.549Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6e/57/147b19686c6f12ee3b5395af7887e70079163e7141b8ed462812003762be/mesa-3.3.0-py3-none-any.whl", hash = "sha256:f50039e6e1d3eca4455753205a2440d9d56db01495154ba071903b5b4975e548", size = 239639, upload-time = "2025-09-06T20:14:44.748Z" },
+]
+
+[[package]]
 name = "mujoco"
 version = "3.3.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1004,6 +1025,15 @@ wheels = [
 ]
 
 [[package]]
+name = "ply"
+version = "3.11"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/69/882ee5c9d017149285cab114ebeab373308ef0f874fcdac9beb90e0ac4da/ply-3.11.tar.gz", hash = "sha256:00c7c1aaa88358b9c765b6d3000c6eec0ba42abca5351b095321aef446081da3", size = 159130, upload-time = "2018-02-15T19:01:31.097Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/58/35da89ee790598a0700ea49b2a66594140f44dec458c07e8e3d4979137fc/ply-3.11-py2.py3-none-any.whl", hash = "sha256:096f9b8350b65ebd2fd1346b12452efe5b9607f7482813ffca50c22722a807ce", size = 49567, upload-time = "2018-02-15T19:01:27.172Z" },
+]
+
+[[package]]
 name = "pycollada"
 version = "0.9.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1149,6 +1179,22 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f6/b0/4bc07ccd3572a2f9df7e6782f52b0c6c90dcbb803ac4a167702d7d0dfe1e/python_dotenv-1.1.1.tar.gz", hash = "sha256:a8a6399716257f45be6a007360200409fce5cda2661e3dec71d23dc15f6189ab", size = 41978, upload-time = "2025-06-24T04:21:07.341Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5f/ed/539768cf28c661b5b068d66d96a2f155c4971a5d55684a514c1a0e0dec2f/python_dotenv-1.1.1-py3-none-any.whl", hash = "sha256:31f23644fe2602f88ff55e1f5c79ba497e01224ee7737937930c448e4d0e24dc", size = 20556, upload-time = "2025-06-24T04:21:06.073Z" },
+]
+
+[[package]]
+name = "pythran"
+version = "0.18.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beniget" },
+    { name = "gast" },
+    { name = "numpy" },
+    { name = "ply" },
+    { name = "setuptools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/94/0a/95a72f09f25dae48f41e367959075ed4c7a0ff02dd3f54eec111501d648a/pythran-0.18.0.tar.gz", hash = "sha256:5c003e8cbedf6dbb68c2869c49fc110ce8b5e8982993078a4a819f1dadc4fc6a", size = 2402895, upload-time = "2025-05-23T09:30:57.155Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a2/49/c5c72ebb49edf56bb06d3b805870cf6598565461670d88d292085ac96bfe/pythran-0.18.0-py3-none-any.whl", hash = "sha256:405ecf2100d4926d1a15640c36bd1b19a560386653d0ee4d5234f9421ef4034b", size = 4343521, upload-time = "2025-05-23T09:30:54.741Z" },
 ]
 
 [[package]]
@@ -1373,6 +1419,15 @@ wheels = [
 ]
 
 [[package]]
+name = "setuptools"
+version = "80.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/5d/3bf57dcd21979b887f014ea83c24ae194cfcd12b9e0fda66b957c69d1fca/setuptools-80.9.0.tar.gz", hash = "sha256:f36b47402ecde768dbfafc46e8e4207b4360c654f1f3bb84475f0a28628fb19c", size = 1319958, upload-time = "2025-05-27T00:56:51.443Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922", size = 1201486, upload-time = "2025-05-27T00:56:49.664Z" },
+]
+
+[[package]]
 name = "shapely"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1468,15 +1523,6 @@ wheels = [
 ]
 
 [[package]]
-name = "strenum"
-version = "0.4.15"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/85/ad/430fb60d90e1d112a62ff57bdd1f286ec73a2a0331272febfddd21f330e1/StrEnum-0.4.15.tar.gz", hash = "sha256:878fb5ab705442070e4dd1929bb5e2249511c0bcf2b0eeacf3bcd80875c82eff", size = 23384, upload-time = "2023-06-29T22:02:58.399Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/69/297302c5f5f59c862faa31e6cb9a4cd74721cd1e052b38e464c5b402df8b/StrEnum-0.4.15-py3-none-any.whl", hash = "sha256:a30cda4af7cc6b5bf52c8055bc4bf4b2b6b14a93b574626da33df53cf7740659", size = 8851, upload-time = "2023-06-29T22:02:56.947Z" },
-]
-
-[[package]]
 name = "svg-path"
 version = "7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1492,6 +1538,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b7/4d/08c89e34946fce2aec4fbb45c9016efd5f4d7f24af8e5d93296e935631d8/threadpoolctl-3.6.0.tar.gz", hash = "sha256:8ab8b4aa3491d812b623328249fab5302a68d2d71745c8a4c719a2fcaba9f44e", size = 21274, upload-time = "2025-03-13T13:49:23.031Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/32/d5/f9a850d79b0851d1d4ef6456097579a9005b31fea68726a4ae5f2d82ddd9/threadpoolctl-3.6.0-py3-none-any.whl", hash = "sha256:43a0b8fd5a2928500110039e43a5eed8480b918967083ea48dc3ab9f13c4a7fb", size = 18638, upload-time = "2025-03-13T13:49:21.846Z" },
+]
+
+[[package]]
+name = "tqdm"
+version = "4.67.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540, upload-time = "2024-11-24T20:12:19.698Z" },
 ]
 
 [[package]]

@@ -3,14 +3,13 @@ name = "ariel"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-authors = [
-    { name = "JMDM", email = "jmo.880@gmail.com" }
-]
+authors = [{ name = "JMDM", email = "jmo.880@gmail.com" }]
 requires-python = ">=3.12"
 dependencies = [
     "cmaes>=0.11.1",
-    "fast-perlin-noise>=1.1.2",
+    # "fast-perlin-noise>=1.1.2",
     "matplotlib>=3.10.3",
+    "mesa>=3.3.0",
     "mujoco>=3.3.4",
     "mypy>=1.17.0",
     "networkx>=3.5",
