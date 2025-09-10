@@ -236,3 +236,5 @@ Temporary Items
 # 3D Images
 *.3dm
 *.max
+
+.direnv
