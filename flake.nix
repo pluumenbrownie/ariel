@@ -53,6 +53,8 @@
       # };
     };
 
+    hacks = pkgs.callPackage pyproject-nix.build.hacks {};
+
     # Extend generated overlay with build fixups
     #
     # Uv2nix can only work with what it has, and uv.lock is missing essential metadata to perform some builds.
@@ -82,6 +84,11 @@
               setuptools = [];
             };
         });
+
+        glfw = hacks.nixpkgsPrebuilt {
+          from = pkgs.python312Packages.glfw;
+          prev = _prev.glfw;
+        };
       }
     );
 
