@@ -44,7 +44,6 @@ class EASettings(BaseSettings):
     quiet: bool = False
 
     # EC mechanisms
-    survivors_are_new_generation: bool = True
     is_maximisation: bool = True
     first_generation_id: int = 0
     num_of_generations: int = 100
@@ -66,6 +65,21 @@ class AbstractEA:
         db_file_path: str | Path | None = None,
         db_handling: DB_HANDLING_MODES | None = None,
     ) -> None:
+        """
+        _summary_
+
+        Parameters
+        ----------
+        db_file_path : str | Path | None, optional
+            _description_, by default None
+        db_handling : DB_HANDLING_MODES | None, optional
+            _description_, by default None
+
+        Raises
+        ------
+        FileExistsError
+            _description_
+        """
         db_file_path = db_file_path or config.db_file_path
         db_handling = db_handling or config.db_handling
 
@@ -103,17 +117,35 @@ class EAStep:
         return self.operation(population)
 
 
-class BasicEA(AbstractEA):
+class EA(AbstractEA):
     def __init__(
         self,
         population: Population,
         operations: list[EAStep],
         num_of_generations: int | None = None,
         *,
-        survivors_are_new_generation: bool | None = None,
         first_generation_id: int | None = None,
         quiet: bool | None = None,
     ) -> None:
+        """
+        Initialize an Evolutionary Algorithm (EA) instance.
+
+        Parameters
+        ----------
+        population : Population
+            Initial population.
+        operations : list[EAStep]
+            List of operations to be performed in each generation.
+        num_of_generations : int | None, optional
+            Number of generations to run the EA for, by default None.
+            If None, the value from the global config is used.
+        first_generation_id : int | None, optional
+            ID of the first generation, by default None.
+            If None, the value from the global config is used.
+        quiet : bool | None, optional
+            Whether to suppress console output, by default None.
+            If None, the value from the global config is used.
+        """
         # Local parameters
         self.operations = operations
 
@@ -279,11 +311,14 @@ def crossover(population: Population) -> Population:
         child_i = Individual()
         child_i.genotype = genotype_i
         child_i.tags = {"mut": True}
+        child_i.requires_eval = True
 
         # Second child
         child_j = Individual()
         child_j.genotype = genotype_j
         child_j.tags = {"mut": True}
+        child_j.requires_eval = True
+
         population.extend([child_i, child_j])
     return population
 
@@ -352,7 +387,7 @@ def main() -> None:
     ]
 
     # Initialize EA
-    ea = BasicEA(
+    ea = EA(
         population_list,
         operations=ops,
         num_of_generations=100,

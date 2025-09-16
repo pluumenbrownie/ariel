@@ -1,4 +1,4 @@
-def xy_displacement_ff(xy1, xy2) -> float:
+def xy_displacement(xy1, xy2) -> float:
     """
     Calculate the displacement between two points in 2D space.
 
@@ -12,7 +12,7 @@ def xy_displacement_ff(xy1, xy2) -> float:
     return ((xy1[0] - xy2[0]) ** 2 + (xy1[1] - xy2[1]) ** 2) ** 0.5
 
 
-def x_speed_ff(xy1, xy2, dt) -> float:
+def x_speed(xy1, xy2, dt) -> float:
     """
     Calculate the speed in the x direction between two points.
 
@@ -27,7 +27,7 @@ def x_speed_ff(xy1, xy2, dt) -> float:
     return abs(xy2[0] - xy1[0]) / dt if dt > 0 else 0.0
 
 
-def y_speed_ff(xy1, xy2, dt) -> float:
+def y_speed(xy1, xy2, dt) -> float:
     """
     Calculate the speed in the y direction between two points.
 
@@ -40,7 +40,3 @@ def y_speed_ff(xy1, xy2, dt) -> float:
     float: The speed in the y direction.
     """
     return abs(xy2[1] - xy1[1]) / dt if dt > 0 else 0.0
-
-
-
-

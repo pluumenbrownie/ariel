@@ -56,10 +56,13 @@ class HopfCPG:
 
         # Adjacency list for coupling
         self.adjacency_list = adjacency_list
-
+        if len(adjacency_list) != num_neurons:
+            raise ValueError("Adjacency list length must match number of neurons.")
+        
         # --- Initialize state variables --- #
-        self.x: ArrayLike = RNG.uniform(-0.1, 0.1, self.num_neurons)
-        self.y: ArrayLike = RNG.uniform(-0.1, 0.1, self.num_neurons)
+        self.init_state = 0.5
+        self.x: ArrayLike = RNG.uniform(-self.init_state, self.init_state, self.num_neurons)
+        self.y: ArrayLike = RNG.uniform(-self.init_state, self.init_state, self.num_neurons)
 
         # --- Adjustable parameters --- #
         # Angular frequency (1Hz default)
@@ -75,6 +78,13 @@ class HopfCPG:
         for i, conn in adjacency_list.items():
             for j in conn:
                 self.phase_diff[i, j] = np.pi / 2
+
+    def reset(self) -> None:
+        # Reset state variables
+        self.x = RNG.uniform(-self.init_state, self.init_state, self.num_neurons)
+        self.y = RNG.uniform(-self.init_state, self.init_state, self.num_neurons)
+        self.omega = np.ones(self.num_neurons) * 2 * np.pi
+        self.A = np.ones(self.num_neurons) * 1.0
 
     def step(
         self,

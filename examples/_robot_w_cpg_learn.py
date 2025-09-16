@@ -33,20 +33,16 @@ from mujoco import viewer
 from rich.console import Console
 
 # Local libraries
-from ariel.body_phenotypes.robogen_lite.config import (
-    NUM_OF_FACES,
-    NUM_OF_ROTATIONS,
-    NUM_OF_TYPES_OF_MODULES,
-)
-from ariel.body_phenotypes.robogen_lite.constructor import (
-    construct_mjspec_from_graph,
-)
+from ariel.body_phenotypes.robogen_lite.config import (NUM_OF_FACES,
+                                                       NUM_OF_ROTATIONS,
+                                                       NUM_OF_TYPES_OF_MODULES)
+from ariel.body_phenotypes.robogen_lite.constructor import \
+    construct_mjspec_from_graph
 from ariel.body_phenotypes.robogen_lite.decoders.hi_prob_decoding import (
-    HighProbabilityDecoder,
-    save_graph_as_json,
-)
+    HighProbabilityDecoder, save_graph_as_json)
 from ariel.body_phenotypes.robogen_lite.modules.core import CoreModule
-from ariel.simulation.controllers.cpg_with_sensory_feedback import CPGSensoryFeedback
+from ariel.simulation.controllers.cpg_with_sensory_feedback import \
+    CPGSensoryFeedback
 from ariel.simulation.environments.simple_flat_world import SimpleFlatWorld
 from ariel.utils.runners import simple_runner
 
@@ -246,5 +242,4 @@ def policy(
 
 
 if __name__ == "__main__":
-    # Test several times
     main()

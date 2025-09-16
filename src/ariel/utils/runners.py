@@ -36,7 +36,7 @@ def simple_runner(
 ) -> None:
     """
     Run a simple simulation for a given duration.
-
+    
     Parameters
     ----------
     model : mujoco.MjModel
@@ -46,7 +46,7 @@ def simple_runner(
     duration : float, optional
         The duration of the simulation in seconds, by default 10.0
     steps_per_loop : int, optional
-        The number of simulation steps to take in each loop, by default 1000
+        The number of simulation steps to take in each loop, by default 100
     """
     # Reset state and time of simulation
     mujoco.mj_resetData(model, data)
@@ -56,3 +56,4 @@ def simple_runner(
 
     while data.time < duration:
         mujoco.mj_step(model, data, nstep=steps_per_loop)
+    

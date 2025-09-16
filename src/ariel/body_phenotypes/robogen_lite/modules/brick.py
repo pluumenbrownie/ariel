@@ -14,10 +14,7 @@ import numpy as np
 import quaternion as qnp
 
 # Local libraries
-from ariel.body_phenotypes.robogen_lite.config import (
-    ModuleFaces,
-    ModuleType,
-)
+from ariel.body_phenotypes.robogen_lite.config import ModuleFaces, ModuleType
 from ariel.body_phenotypes.robogen_lite.modules.module import Module
 
 # Type Aliases

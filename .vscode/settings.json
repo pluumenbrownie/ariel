@@ -1,0 +1,29 @@
+{
+    "cSpell.customDictionaries": {
+        "custom": true,
+        "internal-terms": false,
+        "project-words": {
+            "addWords": true,
+            "description": "Words used in this project",
+            "name": "project-words",
+            "path": "${workspaceRoot}/.vscode/project-words.txt"
+        }
+    },
+    "explorerExclude.backup": {},
+    "files.exclude": {
+        "**/.git": false,
+        "**/.svn": false,
+        "**/.hg": false,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": false
+    },
+    "mypy.dmypyExecutable": "/home/vscode/.local/bin/dmypy",
+    "mypy.mypyExecutable": "/home/vscode/.local/bin/mypy",
+    "python-envs.pythonProjects": [],
+    "ruff.path": [
+        "/home/vscode/.local/bin/ruff"
+    ],
+    "workbench.iconTheme": "material-icon-theme",
+    "mypy.enabled": false,
+    "ruff.enable": false
+}

@@ -14,10 +14,7 @@ import numpy as np
 import quaternion as qnp
 
 # Local libraries
-from ariel.body_phenotypes.robogen_lite.config import (
-    ModuleFaces,
-    ModuleType,
-)
+from ariel.body_phenotypes.robogen_lite.config import ModuleFaces, ModuleType
 from ariel.body_phenotypes.robogen_lite.modules.module import Module
 
 # Global constants
@@ -138,7 +135,7 @@ class HingeModule(Module):
             biasprm=biasprm,
             trntype=trntype,
             target=servo_name,
-            ctrlrange=(-np.pi, -np.pi),  # [-180, 180] degrees
+            ctrlrange=(-np.pi/2, np.pi/2),  # [-90, 90] degrees (range of 180)
         )
 
         # Save model specifications

@@ -75,12 +75,17 @@ class Individual(SQLModel, table=True):
     @property
     def fitness(self) -> float:
         if self.fitness_ is None:
-            msg = "Trying to fetch uninitialized data in fitness!"
+            msg = "Trying to fetch uninitialized data in fitness!\n"
+            msg += f"--> {self.fitness_=}"
             raise ValueError(msg)
         return self.fitness_
 
     @fitness.setter
     def fitness(self, fitness_value: float) -> None:
+        if fitness_value is None:
+            msg = "Trying to assign `None` to fitness!\n"
+            msg += f"--> {self.fitness_value=}"
+            raise ValueError(msg)
         self.requires_eval = False
         self.fitness_ = fitness_value
 
@@ -100,7 +105,7 @@ class Individual(SQLModel, table=True):
         self.requires_init = not bool(individual_genotype)
         self.genotype_ = individual_genotype
 
-    # ------------------------ GENOTYPE ------------------------
+    # ------------------------ TAGS ------------------------
     tags_: dict[JSONType, JSONType] = Field(
         default={},
         sa_column=Column(JSON),

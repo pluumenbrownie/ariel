@@ -1,10 +1,21 @@
 import mujoco
 import numpy as np
 
+
 class RoboGenCoreExtractor:
     """Extractor for core geoms in a Mujoco simulation with RoboGenLite robots."""
 
     def __init__(self, model, data, world):
+        """Initialize the extractor with model, data, and world.
+
+        Parameters
+        ----------
+        model : mujoco.MjModel
+            The Mujoco model.
+        data : mujoco.MjData
+            The Mujoco data.
+        world : mujoco.MjvScene
+            The Mujoco world scene."""
         self.model = model
         self.data = data
         self.world = world
@@ -53,5 +64,8 @@ class RoboGenCoreExtractor:
             Tuple of first and last core geom (x,y)-positions."""
         core_path = self.get_core_path()
 
-        return core_path[0, :2], core_path[-1, :2] if core_path.size > 0 else (None, None)
-    
+        return core_path[0, :2], core_path[-1, :2] if core_path.size > 0 else (
+            None,
+            None,
+        )
+        )

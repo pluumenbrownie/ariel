@@ -2,280 +2,168 @@ import sys
 
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QBrush, QPainter, QPainterPath, QPen
-from PyQt5.QtWidgets import (
-    QApplication,
-    QComboBox,
-    QGraphicsEllipseItem,
-    QGraphicsItem,
-    QGraphicsPathItem,
-    QGraphicsScene,
-    QGraphicsView,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMainWindow,
-    QTabWidget,
-    QVBoxLayout,
-    QWidget,
-)
-from PyQt5.QtWidgets import QPushButton, QGraphicsProxyWidget
-from PyQt5.QtWidgets import QLineEdit, QComboBox
-from QNodeEditor.node import Node
-from QNodeEditor import Node, NodeEditorDialog
-
-# ENUMS as a base
-
-# Import the backend components
-from ariel.simulation.environments.__init__ import __all__ as envs
-from ariel.simulation.tasks.__init__ import _task_fitness_function_map_
-from ariel.simulation.controllers import *
-
+from PyQt5.QtWidgets import (QApplication, QComboBox, QGraphicsEllipseItem,
+                             QGraphicsItem, QGraphicsPathItem, QGraphicsScene,
+                             QGraphicsView, QHBoxLayout, QLabel, QLineEdit,
+                             QMainWindow, QTabWidget, QVBoxLayout, QWidget)
 # ========================
 # Node Editor Components
 # ========================
+from QNodeEditor import Node, NodeEditorDialog
 
-# The extractor used is what should be specificied in this case I guess
-class PhenotypeNode(Node):
-    code = 111
 
-    def create(self):
-        self.title = "Select Phenotype"
-        self.add_combo_box_entry("Phenotype", items=["RoboGen-robot", "Integer-Solution"])
-        self.add_label_output("Selected Phenotype")
-
-    def evaluate(self, values: dict):
-        phenotype = self.entries_dict["Phenotype"].get_value()
-        self.set_output_value("Selected Phenotype", phenotype)
-        return phenotype
-
-class GenotypeNode(Node):
-    code = 211
+class AddNode(Node):
+    code = 0  # Unique code for each node type
 
     def create(self):
-        self.title = "Select Genotype"
-        self.add_combo_box_entry("Genotype", items=["HighProbEncoding", "IntegerEncoding"])
-        self.add_label_output("Selected Genotype")
+        self.title = "Addition"  # Set the node title
+
+        self.add_label_output("Output")  # Add output socket
+        self.add_value_input("Value 1")  # Add input socket for first value
+        self.add_value_input("Value 2")  # Add input socket for second value
 
     def evaluate(self, values: dict):
-        genotype = self.entries_dict["Genotype"].get_value()
-        self.set_output_value("Selected Genotype", genotype)
-        return genotype
+        result = values["Value 1"] + values["Value 2"]  # Add 'Value 1' and 'Value 2'
+        self.set_output_value("Output", result)  # Set as value for 'Output'
 
-class EnvironmentNode(Node):
-    code=121
-    def create(self):
-        self.title = "Select Environment"
-        self.add_combo_box_entry("Environment", items=envs)
-        self.add_label_output("Selected Environment")
-
-    def evaluate(self, values: dict):
-        env = self.entries_dict["Environment"].get_value()
-        self.set_output_value("Selected Environment", env)
-        return env
-
-class TaskNode(Node):
-    code = 122
+    # class OutNode(Node):
+    #     code = 1  # Unique code for this node
 
     def create(self):
-        self.title = "Select Task"
-        self.add_combo_box_entry("Task", items=_task_fitness_function_map_.keys())
-        self.add_label_output("Selected Task")  # output socket
+        self.title = "Output"  # Set the title of the node
+        self.add_label_input("Value")  # Add input value
 
-    def evaluate(self, values: dict):
-        task = self.entries_dict["Task"].get_value()
-        self.set_output_value("Selected Task", task)
-        # print(f"TaskNode selected task: {task}")
-        return task
-    
-class FitnessFunctionNode(Node):
-    code = 221
+    # if __name__ == "__main__":
+    #     app = QApplication(sys.argv)
+
+    dialog = NodeEditorDialog()
+    # Register both custom nodes
+    dialog.editor.available_nodes = {"Addition": AddNode, "Output": OutNode}
+    dialog.editor.output_node = OutNode
+    if dialog.exec():
+        print(dialog.result)
+        sys.exit(app.exec_())
 
 
-    task_map = _task_fitness_function_map_ # imported above from the actual file
+#     # Run the PyQt application
+#     app.exec()
 
-    def create(self):
-        self.title = "Select Fitness Function"
-        # Input socket from TaskNode
-        self.add_value_input("Task")
-
-        # Dropdown for fitness functions (initially empty)
-        self.add_combo_box_entry("Fitness Function", items=[])  # Default items
-        self.add_label_output("Selected Fitness Function")
-
-    def evaluate(self, values: dict):
-        # This is the **value from the input socket**
-        task_input = values.get("Task")
-        combo = self.entries_dict["Fitness Function"]
-
-        if task_input in self.task_map:
-            # Update dropdown items dynamically
-            combo.clear()
-            combo.addItems(self.task_map[task_input])
-
-        # Get currently selected fitness function
-        selected = combo.get_value()
-        self.set_output_value("Selected Fitness Function", selected)
-        return selected
-
-class MutationNode(Node):
-    code=311
-
-    def create(self):
-        self.title = "Select Mutation"
-        self.add_combo_box_entry("Mutation", items=["Gaussian", "Uniform", "Creep"])
-        self.add_label_output("Selected Mutation")
-    
-    def evaluate(self, values: dict):
-        mutation = self.entries_dict["Mutation"].get_value()
-        self.set_output_value("Selected Mutation", mutation)
-        return mutation
-    
-class CrossoverNode(Node):
-    code=312
-
-    def create(self):
-        self.title = "Select Crossover"
-        self.add_combo_box_entry("Crossover", items=["One-Point", "Two-Point", "Uniform"])
-        self.add_label_output("Selected Crossover")
-    
-    def evaluate(self, values: dict):
-        crossover = self.entries_dict["Crossover"].get_value()
-        self.set_output_value("Selected Crossover", crossover)
-        return crossover
-
-class ParentSelectionNode(Node):
-    code=321
-
-    def create(self):
-        self.title = "Select Parent Selection"
-        self.add_combo_box_entry("Parent Selection", items=["Tournament", "Roulette Wheel", "Top-N"])
-        self.add_label_output("Selected Parent Selection")
-    
-    def evaluate(self, values: dict):
-        parent_selection = self.entries_dict["Parent Selection"].get_value()
-        self.set_output_value("Selected Parent Selection", parent_selection)
-        return parent_selection
-
-class SurvivorSelectionNode(Node):
-    code=322
-
-    def create(self):
-        self.title = "Select Survivor Selection"
-        self.add_combo_box_entry("Survivor Selection", items=["Tournament", "Roulette Wheel", "Top-N"])
-        self.add_label_output("Selected Survivor Selection")
-    
-    def evaluate(self, values: dict):
-        survivor_selection = self.entries_dict["Survivor Selection"].get_value()
-        self.set_output_value("Selected Survivor Selection", survivor_selection)
-        return survivor_selection
-
-# ----------------------------
-# EA Parameters Node
-# ----------------------------
-
-class EAParametersNode(Node):
-    code = 422
-
-    def create(self):
-        self.title = "EA Parameters"
-
-        # Outputs only the parameters needed by EA
-        self.add_value_output("Population Size")
-        self.add_value_output("Generations")
-
-        self.entries_dict = {entry.name: entry for entry in self.entries}
-
-    def evaluate(self, values: dict):
-        # Fetch values from line edits
-        pop_size = self.entries_dict["Population Size"].get_value()
-        generations = self.entries_dict["Generations"].get_value()
-
-        # Store outputs for input nodes to fetch
-        self.set_output_value("Population Size", pop_size)
-        self.set_output_value("Generations", generations)
-
-        return {"Population Size": pop_size, "Generations": generations}
+#     sys.exit(app.exec_())
 
 
 # ========================
-# EA Run Node
+# Main GUI
 # ========================
-class EARun(Node):
-    code = 999
 
-    def create(self):
-        self.title = "Run EA"
+# class RobotEvolutionGUI(QMainWindow):
+#     def __init__(self):
+#         super().__init__()
+#         self.setWindowTitle("Robot Evolution System")
+#         self.setGeometry(100, 100, 1000, 700)
 
-        # Add input sockets for all configurable values
-        input_names = [
-            "Phenotype", "Genotype", "Environment", "Task",
-            "Fitness Function", "Mutation", "Crossover",
-            "Parent Selection", "Survivor Selection",
-            "pop_size", "generations"
-        ]
-        for name in input_names:
-            self.add_value_input(name)
+#         self.tab_widget = QTabWidget(self)
+#         self.setCentralWidget(self.tab_widget)
 
-    def evaluate(self, values: dict):
-        # Automatically fetch values from connected nodes
-        pop_size = self.fetch_input_value("pop_size")
-        generations = self.fetch_input_value("generations")
-        phenotype = self.fetch_input_value("Phenotype")
-        genotype = self.fetch_input_value("Genotype")
-        environment = self.fetch_input_value("Environment")
-        task = self.fetch_input_value("Task")
-        fitness_functions = self.fetch_input_value("Fitness Function")
-        mutation = self.fetch_input_value("Mutation")
-        crossover = self.fetch_input_value("Crossover")
-        parent_selection = self.fetch_input_value("Parent Selection")
-        survivor_selection = self.fetch_input_value("Survivor Selection")
+#         # Keep your existing selection tab
+#         self.tab_widget.addTab(self.create_selection_tab(), "Selection Algorithms")
 
-        if None in [pop_size, generations]:
-            raise ValueError("EAParametersNode values not available!")
+#         # Add Node Editor tab
+#         self.tab_widget.addTab(NodeEditor(), "Node Editor (Experimental)")
 
-        # --- Build EA backend ---
-        from ariel.ec.a004 import BasicEA, EAStep, create_individual, \
-            parent_selection as ps_op, crossover as co_op, mutation as mut_op, \
-            evaluate as eval_op, survivor_selection as ss_op
+#     def create_selection_tab(self):
+#         widget = QWidget()
+#         layout = QVBoxLayout()
+#         layout.addWidget(QLabel("Define Parent and Survivor Selection Types"))
 
-        population = [create_individual() for _ in range(pop_size)]
-        population = eval_op(population)
+#         # Mapping for display names and internal names
+#         self.selection_display_to_internal = {
+#             "Tournament": "tournament",
+#             "Roulette Wheel": "roulette",
+#             "Top-N": "topn"
+#         }
+#         self.selection_internal_to_display = {v: k for k, v in self.selection_display_to_internal.items()}
 
-        operations = []
-        if parent_selection:
-            operations.append(EAStep("parent_selection", ps_op))
-        if crossover:
-            operations.append(EAStep("crossover", co_op))
-        if mutation:
-            operations.append(EAStep("mutation", mut_op))
-        operations.append(EAStep("evaluation", eval_op))
-        if survivor_selection:
-            operations.append(EAStep("survivor_selection", ss_op))
+#         # Parent selection dropdown
+#         self.parent_dropdown = QComboBox()
+#         self.parent_dropdown.addItems(self.selection_internal_to_display.values())
+#         self.parent_dropdown.setToolTip("Click the dropdown to choose the parent selection method to be used by your evolutionary algorithm.")
+#         parent_title = QLabel("Parent Selection: ")
+#         layout.addWidget(parent_title)
+#         layout.addWidget(self.parent_dropdown)
 
-        ea = BasicEA(population=population, operations=operations, num_of_generations=generations)
-        ea.run()
+#         # Parent selection parameters
+#         self.parent_params_layout = QVBoxLayout()
+#         layout.addLayout(self.parent_params_layout)
 
-        best = ea.get_solution("best", only_alive=False)
-        self.set_output_value("EA Result", best)
-        self.result = best
-        return best
+#         # Connect parent dropdown to update function
+#         self.parent_dropdown.currentIndexChanged.connect(
+#             lambda: self.update_selection_params(self.parent_dropdown, self.parent_params_layout)
+#         )
 
+#         # Survivor selection dropdown
+#         self.survivor_dropdown = QComboBox()
+#         self.survivor_dropdown.addItems(self.selection_internal_to_display.values())
+#         self.survivor_dropdown.setToolTip("Click the dropdown to choose the survival selection method to be used by your evolutionary algorithm.")
+#         layout.addWidget(QLabel("Survivor Selection:"))
+#         layout.addWidget(self.survivor_dropdown)
 
+#         # Survivor selection parameters
+#         self.survivor_params_layout = QVBoxLayout()
+#         layout.addLayout(self.survivor_params_layout)
 
+#         # Connect survivor dropdown to update function
+#         self.survivor_dropdown.currentIndexChanged.connect(
+#             lambda: self.update_selection_params(self.survivor_dropdown, self.survivor_params_layout)
+#         )
 
-app = QApplication(sys.argv)
-dialog = NodeEditorDialog()
-dialog.editor.available_nodes = {"Environment" : EnvironmentNode, 
-                                 "Task": TaskNode,
-                                 "FitnessFunction": FitnessFunctionNode,
-                                 "Phenotype": PhenotypeNode,
-                                 "Genotype": GenotypeNode,
-                                 "Mutation": MutationNode,
-                                 "Crossover": CrossoverNode,
-                                 "ParentSelection": ParentSelectionNode,
-                                 "SurvivorSelection": SurvivorSelectionNode,
-                                 "EA_Parameters": EAParametersNode,
-                                 "EA_run": EARun}
-dialog.editor.output_node = EARun
-if dialog.exec():
-    print(dialog.result)
+#         widget.setLayout(layout)
+
+#         # Automatically update parameters for the initial selection
+#         self.update_selection_params(self.parent_dropdown, self.parent_params_layout)
+#         self.update_selection_params(self.survivor_dropdown, self.survivor_params_layout)
+
+#         return widget
+
+#     def update_selection_params(self, item, params_layout):
+#         """Update the parameter input fields based on the selected function."""
+#         if item is None:
+#             return
+
+#         # Clear existing parameter input fields and layouts
+#         while params_layout.count():
+#             layout_item = params_layout.takeAt(0)
+#             if layout_item.widget():
+#                 layout_item.widget().deleteLater()
+#             elif layout_item.layout():
+#                 child_layout = layout_item.layout()
+#                 while child_layout.count():
+#                     child_item = child_layout.takeAt(0)
+#                     if child_item.widget():
+#                         child_item.widget().deleteLater()
+#                 child_layout.deleteLater()
+
+#         # Selection parameters
+#         selection_params = {
+#             "tournament": {"k": 2},
+#             "roulette": {"n": 1},
+#             "topn": {"n": 1}
+#         }
+
+#         # Get the internal name from the display name
+#         selected_function_display = item.currentText()
+#         selected_function = self.selection_display_to_internal.get(selected_function_display, None)
+
+#         if selected_function in selection_params:
+#             for param, value in selection_params[selected_function].items():
+#                 input_layout = QHBoxLayout()
+#                 input_label = QLabel(f"{param}:")
+#                 input_field = QLineEdit(str(value))
+#                 input_layout.addWidget(input_label)
+#                 input_layout.addWidget(input_field)
+#                 params_layout.addLayout(input_layout)
+
+# if __name__ == "__main__":
+#     app = QApplication(sys.argv)
+#     window = RobotEvolutionGUI()
+#     window.show()
+#     sys.exit(app.exec_())
