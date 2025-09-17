@@ -1,4 +1,5 @@
 # Third-party libraries
+from typing import Any, Self
 import numpy as np
 import mujoco
 from mujoco import viewer
@@ -8,6 +9,7 @@ import matplotlib
 # Local libraries
 from ariel.utils.renderers import video_renderer
 from ariel.utils.video_recorder import VideoRecorder
+from ariel.utils.runners import simple_runner
 from ariel.simulation.environments.simple_flat_world import SimpleFlatWorld
 
 # import prebuilt robot phenotypes
@@ -15,6 +17,8 @@ from ariel.body_phenotypes.robogen_lite.prebuilt_robots.gecko import gecko
 
 # Keep track of data / history
 HISTORY = []
+
+rng = np.random.default_rng()
 
 
 def random_move(model, data, to_track) -> None:
@@ -104,34 +108,40 @@ def show_qpos_history(history: list):
     plt.close()
 
 
-def controller(model, data, to_track):
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))
 
-    def sigmoid(x):
-        return 1.0 / (1.0 + np.exp(-x))
 
-    # Simple 3-layer neural network
-    input_size = len(data.qpos)
-    hidden_size = 8
-    output_size = model.nu
+class Brain:
+    def __init__(self, input_size: int, hidden_size: int, output_size: int) -> None:
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
 
-    # Initialize the networks weights randomly
-    W1 = np.random.randn(input_size, hidden_size) * 0.1
-    W2 = np.random.randn(hidden_size, hidden_size) * 0.1
-    W3 = np.random.randn(hidden_size, output_size) * 0.1
+        self.W1 = np.zeros(shape=(input_size, hidden_size))
+        self.W2 = np.zeros(shape=(hidden_size, hidden_size))
+        self.W3 = np.zeros(shape=(hidden_size, output_size))
 
-    # Get outputs, in this case the positions of the actuator motore (hinges)
-    inputs = data.qpos
+    def random(self) -> Self:
+        self.W1 = rng.standard_normal((self.input_size, self.hidden_size))
+        self.W2 = rng.standard_normal((self.hidden_size, self.hidden_size))
+        self.W3 = rng.standard_normal((self.hidden_size, self.output_size))
+        return self
 
-    # Run the inputs through the lays of the network
-    layer1 = sigmoid(np.dot(inputs, W1))
-    layer2 = sigmoid(np.dot(layer1, W2))
-    outputs = sigmoid(np.dot(layer2, W3))
+    def control(self, model: Any, data: Any, to_track: Any):
+        # Get outputs, in this case the positions of the actuator motore (hinges)
+        inputs = data.qpos
 
-    # Scale the outputs to [-pi/2, pi/2]
-    data.ctrl = np.clip(outputs, -np.pi / 2, np.pi / 2)
+        # Run the inputs through the lays of the network
+        layer1 = sigmoid(np.dot(inputs, self.W1))
+        layer2 = sigmoid(np.dot(layer1, self.W2))
+        outputs = sigmoid(np.dot(layer2, self.W3))
 
-    # Save movement to history
-    HISTORY.append(to_track[0].xpos.copy())
+        # Scale the outputs to [-pi/2, pi/2]
+        data.ctrl = np.clip(outputs, -np.pi / 2, np.pi / 2)
+
+        # Save movement to history
+        HISTORY.append(to_track[0].xpos.copy())
 
 
 def main():
@@ -139,8 +149,25 @@ def main():
     # Initialise controller to controller to None, always in the beginning.
     mujoco.set_mjcb_control(None)  # DO NOT REMOVE
 
+    population = [Brain(15, 8, 8).random() for _ in range(100)]
+
     # Initialise world
-    # Import environments from ariel.simulation.environments
+    model, to_track = compile_world()
+
+    print(f"{population[0].W1 = }")
+    for controller in population:
+        test_controller(controller, model, to_track)
+
+    show_qpos_history(HISTORY)
+
+
+def compile_world() -> tuple[Any, Any]:
+    """
+    Return a flat world with gecko.
+
+    :return: The compiled world model and the to_track.
+    :rtype: tuple[Any, Any]
+    """
     world = SimpleFlatWorld()
 
     # Initialise robot body
@@ -154,6 +181,7 @@ def main():
     # Generate the model and data
     # These are standard parts of the simulation USE THEM AS IS, DO NOT CHANGE
     model = world.spec.compile()
+
     data = mujoco.MjData(model)  # type: ignore
 
     # Initialise data tracking
@@ -162,19 +190,30 @@ def main():
     geoms = world.spec.worldbody.find_all(mujoco.mjtObj.mjOBJ_GEOM)
     to_track = [data.bind(geom) for geom in geoms if "core" in geom.name]
 
+    return model, to_track
+
+
+def test_controller(controller: Brain, model: Any, to_track: Any):
+    """
+    A function to test gecko controllers.
+
+    :param controller: The neural network to test.
+    :type controller: Brain
+    """
+    data = mujoco.MjData(model)  # type: ignore
+
     # Set the control callback function
     # This is called every time step to get the next action.
-    mujoco.set_mjcb_control(lambda m, d: controller(m, d, to_track))
+    mujoco.set_mjcb_control(lambda m, d: controller.control(m, d, to_track))
 
+    # simple_runner(model, data, duration=20)
+    # If you want to record a video of your simulation, you can use the video renderer.
     # This opens a viewer window and runs the simulation with the controller you defined
     # If mujoco.set_mjcb_control(None), then you can control the limbs yourself.
     viewer.launch(
         model=model,  # type: ignore
         data=data,
     )
-
-    show_qpos_history(HISTORY)
-    # If you want to record a video of your simulation, you can use the video renderer.
 
     # # Non-default VideoRecorder options
     # PATH_TO_VIDEO_FOLDER = "./__videos__"
