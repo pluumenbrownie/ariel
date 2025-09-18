@@ -19,9 +19,11 @@ from ariel.simulation.environments.simple_flat_world import SimpleFlatWorld
 from ariel.body_phenotypes.robogen_lite.prebuilt_robots.gecko import gecko
 
 from Neural_Net import Brain, Layer, UniformBrain, SelfAdaptiveBrain
+from plotters import FitnessPlotter
 
 # Keep track of data / history
 HISTORY = []
+
 
 def random_move(model, data, to_track) -> None:
     """Generate random movements for the robot's joints.
@@ -113,16 +115,25 @@ def show_qpos_history(history: list):
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
+
 def main():
     """Main function to run the simulation with random movements."""
     # Initialise controller to controller to None, always in the beginning.
     mujoco.set_mjcb_control(None)  # DO NOT REMOVE
 
-    population = [SelfAdaptiveBrain([
-        Layer(15, 50, sigmoid),
-        Layer(50, 30, sigmoid),
-        Layer(30, 8, lambda x: np.pi * (sigmoid(x)) - 0.5),
-    ], mutation_rate=rd.random()).random() for _ in range(100)]
+    population = [
+        SelfAdaptiveBrain(
+            [
+                Layer(15, 50, sigmoid),
+                Layer(50, 30, sigmoid),
+                Layer(30, 8, lambda x: np.pi * (sigmoid(x)) - 0.5),
+            ],
+            mutation_rate=rd.random(),
+        ).random()
+        for _ in range(100)
+    ]
+
+    plotter = FitnessPlotter()
 
     # Initialise world
     model, data, to_track = compile_world()
@@ -138,6 +149,8 @@ def main():
             f"Highest fitness: {round(population[0].fitness(), 3)} -- Average fitness: {round(np.mean([c.fitness() for c in population]), 3)} --",
             refresh=False,
         )
+        plotter.add([c.fitness() for c in population], gen)
+        plotter.savefig()
 
         scaled_fitnesses = np.array(
             [c.fitness() - population[-1].fitness() for c in population]
