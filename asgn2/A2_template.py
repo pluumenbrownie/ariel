@@ -218,14 +218,17 @@ def main():
     # Initialise world
     model, data, to_track = compile_world()
 
-    for gen in range(10):
-        print(f"Generation {gen}")
-
-        for controller in tqdm(population):
+    max_gens = 20
+    gen_iterator = tqdm(range(max_gens), desc="Generation")
+    for gen in gen_iterator:
+        for controller in tqdm(population, desc="Individual", leave=False):
             test_controller(controller, model, data, to_track)
             # show_qpos_history(controller.history)
         population.sort(key=lambda c: c.fitness(), reverse=True)
-        print(f"Highest fitness: {population[0].fitness()}")
+        gen_iterator.set_description_str(
+            f"Highest fitness: {round(population[0].fitness(), 3)} -- Average fitness: {round(np.mean([c.fitness() for c in population]), 3)} --",
+            refresh=False,
+        )
 
         scaled_fitnesses = np.array(
             [c.fitness() - population[-1].fitness() for c in population]
@@ -233,7 +236,7 @@ def main():
         scaled_fitnesses /= sum(scaled_fitnesses)
 
         next_gen = []
-        for _ in range(round(len(population) / 2)):
+        for _ in range(round(len(population) / 4)):
             p1, p2 = rd.choices(population, weights=scaled_fitnesses, k=2)
             c1, c2 = p1.crossover(p2)
             c1.mutate()
@@ -241,7 +244,8 @@ def main():
             next_gen.append(c1)
             next_gen.append(c2)
 
-        population = next_gen
+        population = population[: len(population) // 2]
+        population.extend(next_gen)
 
 
 def compile_world() -> tuple[Any, Any, Any]:
@@ -286,7 +290,7 @@ def test_controller(controller: Brain, model: Any, data: Any, to_track: Any):
     # This is called every time step to get the next action.
     mujoco.set_mjcb_control(lambda m, d: controller.control(m, d, to_track))
 
-    simple_runner(model, data, duration=20)
+    simple_runner(model, data, duration=10)
     # If you want to record a video of your simulation, you can use the video renderer.
     # This opens a viewer window and runs the simulation with the controller you defined
     # If mujoco.set_mjcb_control(None), then you can control the limbs yourself.
