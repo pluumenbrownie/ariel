@@ -20,8 +20,40 @@ from ariel.body_phenotypes.robogen_lite.prebuilt_robots.gecko import gecko
 
 from Neural_Net import Brain, Layer, UniformBrain, SelfAdaptiveBrain
 
+import json
+
 # Keep track of data / history
 HISTORY = []
+
+def save(brain: Brain) -> None:
+    """Save the brain to a file."""
+    with open(f"__data__/{type(brain).__name__}.json", "w") as f:
+        json.dump(brain.export(), f, indent=4)
+
+def load(filename: str) -> Brain:
+    """Load a brain from a file."""
+    with open(filename, "r") as f:
+        data = json.load(f)
+        layers = []
+        for layer_data in data["layers"]:
+            function = None
+            if layer_data["function"] == "sigmoid":
+                function = sigmoid
+            elif layer_data["function"] == "sigmoid_output":
+                function = sigmoid_output
+            else:
+                raise ValueError(f"Unknown activation function: {layer_data['function']}")
+            layer = Layer(
+                layer_data["input_size"],
+                layer_data["output_size"],
+                function,
+            )
+            layer.weights = np.array(layer_data["weights"])
+            layers.append(layer)
+        if data["name"] == "UniformBrain":
+            return UniformBrain(layers)
+        elif data["name"] == "SelfAdaptiveBrain":
+            return SelfAdaptiveBrain(layers, mutation_rate=data["mutation_rate"])
 
 def random_move(model, data, to_track) -> None:
     """Generate random movements for the robot's joints.
@@ -113,6 +145,9 @@ def show_qpos_history(history: list):
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
+def sigmoid_output(x):
+    return np.pi * (sigmoid(x) - 0.5)
+
 def main():
     """Main function to run the simulation with random movements."""
     # Initialise controller to controller to None, always in the beginning.
@@ -121,7 +156,7 @@ def main():
     population = [SelfAdaptiveBrain([
         Layer(15, 50, sigmoid),
         Layer(50, 30, sigmoid),
-        Layer(30, 8, lambda x: np.pi * (sigmoid(x)) - 0.5),
+        Layer(30, 8, sigmoid_output),
     ], mutation_rate=rd.random()).random() for _ in range(100)]
 
     # Initialise world
