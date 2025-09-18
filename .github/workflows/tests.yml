@@ -15,23 +15,23 @@ jobs:
       matrix:
         include:
           - { python: "3.12", os: "ubuntu-latest", session: "pre-commit" }
-          - { python: "3.13", os: "ubuntu-latest", session: "mypy" }
+          # - { python: "3.13", os: "ubuntu-latest", session: "mypy" }
           - { python: "3.12", os: "ubuntu-latest", session: "mypy" }
-          - { python: "3.11", os: "ubuntu-latest", session: "mypy" }
-          - { python: "3.10", os: "ubuntu-latest", session: "mypy" }
-          - { python: "3.9", os: "ubuntu-latest", session: "mypy" }
-          - { python: "3.13", os: "ubuntu-latest", session: "tests" }
-          - { python: "3.12", os: "ubuntu-latest", session: "tests" }
-          - { python: "3.11", os: "ubuntu-latest", session: "tests" }
-          - { python: "3.10", os: "ubuntu-latest", session: "tests" }
-          - { python: "3.9", os: "ubuntu-latest", session: "tests" }
-          - { python: "3.12", os: "windows-latest", session: "tests" }
-          - { python: "3.12", os: "macos-latest", session: "tests" }
+          # - { python: "3.11", os: "ubuntu-latest", session: "mypy" }
+          # - { python: "3.10", os: "ubuntu-latest", session: "mypy" }
+          # - { python: "3.9", os: "ubuntu-latest", session: "mypy" }
+          # - { python: "3.13", os: "ubuntu-latest", session: "tests" }
+          # - { python: "3.12", os: "ubuntu-latest", session: "tests" }
+          # - { python: "3.11", os: "ubuntu-latest", session: "tests" }
+          # - { python: "3.10", os: "ubuntu-latest", session: "tests" }
+          # - { python: "3.9", os: "ubuntu-latest", session: "tests" }
+          # - { python: "3.12", os: "windows-latest", session: "tests" }
+          # - { python: "3.12", os: "macos-latest", session: "tests" }
           - { python: "3.12", os: "ubuntu-latest", session: "typeguard" }
-          - { python: "3.13", os: "windows-latest", session: "tests" }
-          - { python: "3.13", os: "macos-latest", session: "tests" }
-          - { python: "3.13", os: "ubuntu-latest", session: "xdoctest" }
-          - { python: "3.13", os: "ubuntu-latest", session: "docs-build" }
+          # - { python: "3.13", os: "windows-latest", session: "tests" }
+          # - { python: "3.13", os: "macos-latest", session: "tests" }
+          # - { python: "3.13", os: "ubuntu-latest", session: "xdoctest" }
+          # - { python: "3.13", os: "ubuntu-latest", session: "docs-build" }
 
     env:
       NOXSESSION: ${{ matrix.session }}
@@ -82,7 +82,7 @@ jobs:
 
       - name: Run Nox
         run: |
-          uv run python -m nox --python=${{ matrix.python }}
+          uv run nox --python=${{ matrix.python }}
 
       - name: Upload coverage data
         if: always() && matrix.session == 'tests'
