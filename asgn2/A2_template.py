@@ -18,14 +18,10 @@ from ariel.simulation.environments.simple_flat_world import SimpleFlatWorld
 # import prebuilt robot phenotypes
 from ariel.body_phenotypes.robogen_lite.prebuilt_robots.gecko import gecko
 
+from Neural_Net import Brain, Layer, UniformBrain, SelfAdaptiveBrain
+
 # Keep track of data / history
 HISTORY = []
-
-CROSSOVER_THRESHOLD = 0.5
-MUTATION_THRESHOLD = 0.05
-
-rng = np.random.default_rng()
-
 
 def random_move(model, data, to_track) -> None:
     """Generate random movements for the robot's joints.
@@ -117,100 +113,16 @@ def show_qpos_history(history: list):
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
-class Layer:
-    def __init__(self, input_size: int, output_size: int, function) -> None:
-        self.input_size = input_size
-        self.output_size = output_size
-        self.weights = np.zeros(shape=(input_size, output_size))
-        self.function = function
-
-    def random(self) -> Self:
-        self.weights = rng.standard_normal((self.input_size, self.output_size))
-        return self
-
-    def forward(self, inputs: np.ndarray) -> np.ndarray:
-        return self.function(np.dot(inputs, self.weights))
-
-
-class Brain:
-    def __init__(self, layers: list[Layer]) -> None:
-        self.id = id
-        self.layers = layers
-
-        self.history: list[list[float]] = []
-
-        self._fitness: None | float = None
-
-    def random(self) -> Self:
-        self.layers = [layer.random() for layer in self.layers]
-        return self
-
-    def control(self, model: Any, data: Any, to_track: Any):
-        # Get outputs, in this case the positions of the actuator motore (hinges)
-        inputs = data.qpos
-
-        # Run the inputs through the lays of the network
-        outputs = inputs
-        for layer in self.layers:
-            outputs = layer.forward(outputs)
-
-        # Scale the outputs to [-pi/2, pi/2]
-        data.ctrl = np.clip(outputs, -np.pi / 2, np.pi / 2)
-
-        # Save movement to history
-        self.history.append(to_track[0].xpos.copy())
-
-    def crossover(self, other: "Brain") -> list["Brain"]:
-        """
-        Create two children using crossover with `other`. Uses uniform crossover
-        with a probability of `CROSSOVER_THRESHOLD`.
-
-        :param self: Description
-        :param other: The other parent
-        :type other: "Brain"
-        :return: A list containing the two children.
-        :rtype: list[Brain]
-        """
-        left = Brain([Layer(l.input_size, l.output_size, l.function) for l in self.layers])
-        right = Brain([Layer(l.input_size, l.output_size, l.function) for l in self.layers])
-
-        P = CROSSOVER_THRESHOLD
-
-        selection = []
-        for l in self.layers:
-            selection.append(rng.random(size=l.weights.shape))
-        for i in range(len(self.layers)):
-            left.layers[i].weights[selection[i] > P] = self.layers[i].weights[selection[i] > P]
-            left.layers[i].weights[selection[i] < P] = other.layers[i].weights[selection[i] < P]
-            right.layers[i].weights[selection[i] < P] = self.layers[i].weights[selection[i] < P]
-            right.layers[i].weights[selection[i] > P] = other.layers[i].weights[selection[i] > P]
-
-        return [left, right]
-
-    def mutate(self):
-        P = MUTATION_THRESHOLD
-
-        for layer in self.layers:
-            mutation_mask = rng.random(size=layer.weights.shape) < P
-            layer.weights[mutation_mask] += rng.normal(scale=0.1, size=layer.weights.shape)[mutation_mask]
-
-    def fitness(self) -> float:
-        if self._fitness:
-            return self._fitness
-        self._fitness = self.history[0][1] - self.history[-1][1]
-        return self._fitness
-
-
 def main():
     """Main function to run the simulation with random movements."""
     # Initialise controller to controller to None, always in the beginning.
     mujoco.set_mjcb_control(None)  # DO NOT REMOVE
 
-    population = [Brain([
+    population = [SelfAdaptiveBrain([
         Layer(15, 50, sigmoid),
         Layer(50, 30, sigmoid),
         Layer(30, 8, lambda x: np.pi * (sigmoid(x)) - 0.5),
-    ]).random() for _ in range(100)]
+    ], mutation_rate=rd.random()).random() for _ in range(100)]
 
     # Initialise world
     model, data, to_track = compile_world()
