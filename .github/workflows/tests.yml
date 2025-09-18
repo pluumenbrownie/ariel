@@ -84,65 +84,65 @@ jobs:
         run: |
           uv run nox --python=${{ matrix.python }}
 
-      - name: Upload coverage data
-        if: always() && matrix.session == 'tests'
-        uses: "actions/upload-artifact@v4"
-        with:
-          name: coverage-data-${{ matrix.session }}-${{ matrix.python }}-${{ matrix.os }}
-          path: ".coverage.*"
-          if-no-files-found: ignore
-          include-hidden-files: true
+      # - name: Upload coverage data
+      #   if: always() && matrix.session == 'tests'
+      #   uses: "actions/upload-artifact@v4"
+      #   with:
+      #     name: coverage-data-${{ matrix.session }}-${{ matrix.python }}-${{ matrix.os }}
+      #     path: ".coverage.*"
+      #     if-no-files-found: ignore
+      #     include-hidden-files: true
 
-      - name: Upload documentation
-        if: matrix.session == 'docs-build'
-        uses: actions/upload-artifact@v4
-        with:
-          name: docs
-          path: docs/_build
+      # - name: Upload documentation
+      #   if: matrix.session == 'docs-build'
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: docs
+      #     path: docs/_build
 
-  coverage:
-    runs-on: ubuntu-latest
-    needs: tests
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@v4
+  # coverage:
+  #   runs-on: ubuntu-latest
+  #   needs: tests
+  #   steps:
+  #     - name: Check out the repository
+  #       uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.13"
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+  #     - name: Install uv
+  #       uses: astral-sh/setup-uv@v5
 
-      - name: Create uv virtual environment
-        run: uv venv
+  #     - name: Create uv virtual environment
+  #       run: uv venv
 
-      - name: Install Nox
-        run: |
-          uv pip install nox
-          uv run python -m nox --version
+  #     - name: Install Nox
+  #       run: |
+  #         uv pip install nox
+  #         uv run python -m nox --version
 
-      - name: Install dependencies
-        run: |
-          uv sync --all-groups
+  #     - name: Install dependencies
+  #       run: |
+  #         uv sync --all-groups
 
-      - name: Download coverage data
-        uses: actions/download-artifact@v4
-        with:
-          pattern: coverage-data-*
-          merge-multiple: true
+  #     - name: Download coverage data
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         pattern: coverage-data-*
+  #         merge-multiple: true
 
-      - name: Combine coverage data and display human readable report
-        run: |
-          uv run python -m nox --session=coverage
+  #     - name: Combine coverage data and display human readable report
+  #       run: |
+  #         uv run python -m nox --session=coverage
 
-      - name: Create coverage report
-        run: |
-          uv run python -m nox --session=coverage -- xml -i
+  #     - name: Create coverage report
+  #       run: |
+  #         uv run python -m nox --session=coverage -- xml -i
 
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v4.5.0
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
+  #     - name: Upload coverage report
+  #       uses: codecov/codecov-action@v4.5.0
+  #       env:
+  #         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  #         file: ./coverage.xml
