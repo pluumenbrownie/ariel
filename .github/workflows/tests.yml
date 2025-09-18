@@ -61,4 +61,5 @@ jobs:
             ${{ steps.pre-commit-cache.outputs.result }}-
 
       - name: Run MyPy
+        if: matrix.session == 'mypy'
         run: uv run mypy asgn2/A2_template.py
