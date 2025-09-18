@@ -209,7 +209,7 @@ def main():
     population = [Brain([
         Layer(15, 50, sigmoid),
         Layer(50, 30, sigmoid),
-        Layer(30, 8, sigmoid),
+        Layer(30, 8, lambda x: np.pi * (sigmoid(x)) - 0.5),
     ]).random() for _ in range(100)]
 
     # Initialise world
