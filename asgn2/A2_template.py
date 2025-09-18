@@ -5,6 +5,9 @@ import mujoco
 from mujoco import viewer
 import matplotlib.pyplot as plt
 import matplotlib
+import random as rd
+
+from tqdm import tqdm
 
 # Local libraries
 from ariel.utils.renderers import video_renderer
@@ -17,6 +20,9 @@ from ariel.body_phenotypes.robogen_lite.prebuilt_robots.gecko import gecko
 
 # Keep track of data / history
 HISTORY = []
+
+CROSSOVER_THRESHOLD = 0.5
+MUTATION_THRESHOLD = 0.05
 
 rng = np.random.default_rng()
 
@@ -122,7 +128,7 @@ class Brain:
         self.W2 = np.zeros(shape=(hidden_size, hidden_size))
         self.W3 = np.zeros(shape=(hidden_size, output_size))
 
-        self.history: list[float] = []
+        self.history: list[list[float]] = []
 
         self._fitness: None | float = None
 
@@ -145,8 +151,55 @@ class Brain:
         data.ctrl = np.clip(outputs, -np.pi / 2, np.pi / 2)
 
         # Save movement to history
-        # print(f"{to_track[0] = }")
         self.history.append(to_track[0].xpos.copy())
+
+    def crossover(self, other: "Brain") -> list["Brain"]:
+        """
+        Create two children using crossover with `other`. Uses uniform crossover
+        with a probability of `CROSSOVER_THRESHOLD`.
+
+        :param self: Description
+        :param other: The other parent
+        :type other: "Brain"
+        :return: A list containing the two children.
+        :rtype: list[Brain]
+        """
+        left = Brain(self.input_size, self.hidden_size, self.output_size)
+        right = Brain(self.input_size, self.hidden_size, self.output_size)
+
+        P = CROSSOVER_THRESHOLD
+
+        w1selection = rng.random(size=self.W1.shape)
+        w2selection = rng.random(size=self.W2.shape)
+        w3selection = rng.random(size=self.W3.shape)
+
+        left.W1[w1selection > P] = self.W1[w1selection > P]
+        left.W1[w1selection < P] = other.W1[w1selection < P]
+        right.W1[w1selection < P] = self.W1[w1selection < P]
+        right.W1[w1selection > P] = other.W1[w1selection > P]
+
+        left.W2[w2selection > P] = self.W2[w2selection > P]
+        left.W2[w2selection < P] = other.W2[w2selection < P]
+        right.W2[w2selection < P] = self.W2[w2selection < P]
+        right.W2[w2selection > P] = other.W2[w2selection > P]
+
+        left.W3[w3selection > P] = self.W3[w3selection > P]
+        left.W3[w3selection < P] = other.W3[w3selection < P]
+        right.W3[w3selection < P] = self.W3[w3selection < P]
+        right.W3[w3selection > P] = other.W3[w3selection > P]
+
+        return [left, right]
+
+    def mutate(self):
+        P = MUTATION_THRESHOLD
+
+        w1selection = rng.random(size=self.W1.shape) < P
+        w2selection = rng.random(size=self.W2.shape) < P
+        w3selection = rng.random(size=self.W3.shape) < P
+
+        self.W1[w1selection] += rng.normal(scale=0.1, size=self.W1.shape)[w1selection]
+        self.W2[w2selection] += rng.normal(scale=0.1, size=self.W2.shape)[w2selection]
+        self.W3[w3selection] += rng.normal(scale=0.1, size=self.W3.shape)[w3selection]
 
     def fitness(self) -> float:
         if self._fitness:
@@ -160,18 +213,38 @@ def main():
     # Initialise controller to controller to None, always in the beginning.
     mujoco.set_mjcb_control(None)  # DO NOT REMOVE
 
-    population = [Brain(15, 8, 8).random() for _ in range(1)]
+    population = [Brain(15, 8, 8).random() for _ in range(100)]
 
     # Initialise world
-    model, to_track = compile_world()
+    model, data, to_track = compile_world()
 
-    for controller in population:
-        test_controller(controller, model, to_track)
-        print(f"{controller.fitness() = }")
-        show_qpos_history(controller.history)
+    for gen in range(10):
+        print(f"Generation {gen}")
+
+        for controller in tqdm(population):
+            test_controller(controller, model, data, to_track)
+            # show_qpos_history(controller.history)
+        population.sort(key=lambda c: c.fitness(), reverse=True)
+        print(f"Highest fitness: {population[0].fitness()}")
+
+        scaled_fitnesses = np.array(
+            [c.fitness() - population[-1].fitness() for c in population]
+        )
+        scaled_fitnesses /= sum(scaled_fitnesses)
+
+        next_gen = []
+        for _ in range(round(len(population) / 2)):
+            p1, p2 = rd.choices(population, weights=scaled_fitnesses, k=2)
+            c1, c2 = p1.crossover(p2)
+            c1.mutate()
+            c2.mutate()
+            next_gen.append(c1)
+            next_gen.append(c2)
+
+        population = next_gen
 
 
-def compile_world() -> tuple[Any, Any]:
+def compile_world() -> tuple[Any, Any, Any]:
     """
     Return a flat world with gecko.
 
@@ -188,33 +261,27 @@ def compile_world() -> tuple[Any, Any]:
     # Check docstring for spawn conditions
     world.spawn(gecko_core.spec, spawn_position=[0, 0, 0])
 
+    # Generate the model and data
+    # These are standard parts of the simulation USE THEM AS IS, DO NOT CHANGE
+    model = world.spec.compile()
+    data = mujoco.MjData(model)  # type: ignore
+
     # Initialise data tracking
     # to_track is automatically updated every time step
     # You do not need to touch it.
     geoms = world.spec.worldbody.find_all(mujoco.mjtObj.mjOBJ_GEOM)
-
-    # Generate the model and data
-    # These are standard parts of the simulation USE THEM AS IS, DO NOT CHANGE
-    model = world.spec.compile()
-
-    data = mujoco.MjData(model)  # type: ignore
-
-    print(f"{[geom.name for geom in geoms] = }")
-
     to_track = [data.bind(geom) for geom in geoms if "core" in geom.name]
 
-    return model, to_track
+    return model, data, to_track
 
 
-def test_controller(controller: Brain, model: Any, to_track: Any):
+def test_controller(controller: Brain, model: Any, data: Any, to_track: Any):
     """
     A function to test gecko controllers.
 
     :param controller: The neural network to test.
     :type controller: Brain
     """
-    data = mujoco.MjData(model)  # type: ignore
-
     # Set the control callback function
     # This is called every time step to get the next action.
     mujoco.set_mjcb_control(lambda m, d: controller.control(m, d, to_track))

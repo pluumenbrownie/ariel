@@ -42,6 +42,7 @@ dependencies = [
     "sphinx-design>=0.6.1",
     "sqlalchemy>=2.0.43",
     "sqlmodel>=0.0.24",
+    "tqdm>=4.67.1",
 ]
 
 
