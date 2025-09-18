@@ -122,6 +122,10 @@ class Brain:
         self.W2 = np.zeros(shape=(hidden_size, hidden_size))
         self.W3 = np.zeros(shape=(hidden_size, output_size))
 
+        self.history: list[float] = []
+
+        self._fitness: None | float = None
+
     def random(self) -> Self:
         self.W1 = rng.standard_normal((self.input_size, self.hidden_size))
         self.W2 = rng.standard_normal((self.hidden_size, self.hidden_size))
@@ -135,13 +139,20 @@ class Brain:
         # Run the inputs through the lays of the network
         layer1 = sigmoid(np.dot(inputs, self.W1))
         layer2 = sigmoid(np.dot(layer1, self.W2))
-        outputs = sigmoid(np.dot(layer2, self.W3))
+        outputs = np.pi * (sigmoid(np.dot(layer2, self.W3)) - 0.5)
 
         # Scale the outputs to [-pi/2, pi/2]
         data.ctrl = np.clip(outputs, -np.pi / 2, np.pi / 2)
 
         # Save movement to history
-        HISTORY.append(to_track[0].xpos.copy())
+        # print(f"{to_track[0] = }")
+        self.history.append(to_track[0].xpos.copy())
+
+    def fitness(self) -> float:
+        if self._fitness:
+            return self._fitness
+        self._fitness = self.history[0][1] - self.history[-1][1]
+        return self._fitness
 
 
 def main():
@@ -149,16 +160,15 @@ def main():
     # Initialise controller to controller to None, always in the beginning.
     mujoco.set_mjcb_control(None)  # DO NOT REMOVE
 
-    population = [Brain(15, 8, 8).random() for _ in range(100)]
+    population = [Brain(15, 8, 8).random() for _ in range(1)]
 
     # Initialise world
     model, to_track = compile_world()
 
-    print(f"{population[0].W1 = }")
     for controller in population:
         test_controller(controller, model, to_track)
-
-    show_qpos_history(HISTORY)
+        print(f"{controller.fitness() = }")
+        show_qpos_history(controller.history)
 
 
 def compile_world() -> tuple[Any, Any]:
@@ -178,16 +188,19 @@ def compile_world() -> tuple[Any, Any]:
     # Check docstring for spawn conditions
     world.spawn(gecko_core.spec, spawn_position=[0, 0, 0])
 
+    # Initialise data tracking
+    # to_track is automatically updated every time step
+    # You do not need to touch it.
+    geoms = world.spec.worldbody.find_all(mujoco.mjtObj.mjOBJ_GEOM)
+
     # Generate the model and data
     # These are standard parts of the simulation USE THEM AS IS, DO NOT CHANGE
     model = world.spec.compile()
 
     data = mujoco.MjData(model)  # type: ignore
 
-    # Initialise data tracking
-    # to_track is automatically updated every time step
-    # You do not need to touch it.
-    geoms = world.spec.worldbody.find_all(mujoco.mjtObj.mjOBJ_GEOM)
+    print(f"{[geom.name for geom in geoms] = }")
+
     to_track = [data.bind(geom) for geom in geoms if "core" in geom.name]
 
     return model, to_track
@@ -206,25 +219,13 @@ def test_controller(controller: Brain, model: Any, to_track: Any):
     # This is called every time step to get the next action.
     mujoco.set_mjcb_control(lambda m, d: controller.control(m, d, to_track))
 
-    # simple_runner(model, data, duration=20)
+    simple_runner(model, data, duration=20)
     # If you want to record a video of your simulation, you can use the video renderer.
     # This opens a viewer window and runs the simulation with the controller you defined
     # If mujoco.set_mjcb_control(None), then you can control the limbs yourself.
-    viewer.launch(
-        model=model,  # type: ignore
-        data=data,
-    )
-
-    # # Non-default VideoRecorder options
-    # PATH_TO_VIDEO_FOLDER = "./__videos__"
-    # video_recorder = VideoRecorder(output_folder=PATH_TO_VIDEO_FOLDER)
-
-    # # Render with video recorder
-    # video_renderer(
-    #     model,
-    #     data,
-    #     duration=30,
-    #     video_recorder=video_recorder,
+    # viewer.launch(
+    #     model=model,  # type: ignore
+    #     data=data,
     # )
 
 
