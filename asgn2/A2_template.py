@@ -27,13 +27,13 @@ import json
 HISTORY = []
 
 
-def save(brain: Brain) -> None:
+def save_brain(brain: Brain) -> None:
     """Save the brain to a file."""
     with open(f"__data__/{type(brain).__name__}.json", "w") as f:
         json.dump(brain.export(), f, indent=4)
 
 
-def load(filename: str) -> Brain:
+def load_brain(filename: str) -> Brain:
     """Load a brain from a file."""
     with open(filename, "r") as f:
         data = json.load(f)
@@ -59,6 +59,14 @@ def load(filename: str) -> Brain:
             return UniformBrain(layers)
         elif data["name"] == "SelfAdaptiveBrain":
             return SelfAdaptiveBrain(layers, mutation_rate=data["mutation_rate"])
+
+def save_fitness(weights: np.ndarray, brains: list[Brain]) -> None:
+    """Save the fitness values to a file."""
+    np.save(f"__data__/{type(brains[0]).__name__}_fitness.npy", weights)
+
+def load_fitness(filename: str) -> np.ndarray:
+    """Load the fitness values from a file."""
+    return np.load(filename)
 
 
 def random_move(model, data, to_track) -> None:
@@ -180,6 +188,7 @@ def main():
 
     max_gens = 20
     gen_iterator = tqdm(range(max_gens), desc="Generation")
+    fitness = np.zeros((max_gens, len(population)))
     for gen in gen_iterator:
         for controller in tqdm(population, desc="Individual", leave=False):
             test_controller(controller, model, data, to_track)
@@ -191,6 +200,8 @@ def main():
         )
         plotter.add([c.fitness() for c in population], gen)
         plotter.savefig()
+
+        fitness[gen, :] = [c.fitness() for c in population]
 
         scaled_fitnesses = np.array(
             [c.fitness() - population[-1].fitness() for c in population]
@@ -208,6 +219,13 @@ def main():
 
         population = population[: len(population) // 2]
         population.extend(next_gen)
+
+    for controller in tqdm(population, desc="Individual", leave=False):
+        test_controller(controller, model, data, to_track)
+
+    population.sort(key=lambda c: c.fitness())
+    save_brain(population[0])
+    save_fitness(fitness, population)
 
 
 def compile_world() -> tuple[Any, Any, Any]:
