@@ -60,9 +60,9 @@ def load_brain(filename: str) -> Brain:
         elif data["name"] == "SelfAdaptiveBrain":
             return SelfAdaptiveBrain(layers, mutation_rate=data["mutation_rate"])
 
-def save_fitness(weights: np.ndarray, brains: list[Brain]) -> None:
+def save_fitness(weights: np.ndarray, brain: Brain) -> None:
     """Save the fitness values to a file."""
-    np.save(f"__data__/{type(brains[0]).__name__}_fitness.npy", weights)
+    np.save(f"__data__/{type(brain).__name__}_fitness.npy", weights)
 
 def load_fitness(filename: str) -> np.ndarray:
     """Load the fitness values from a file."""
@@ -186,13 +186,16 @@ def main():
     # Initialise world
     model, data, to_track = compile_world()
 
-    max_gens = 20
+    max_gens = 1
     gen_iterator = tqdm(range(max_gens), desc="Generation")
     fitness = np.zeros((max_gens, len(population)))
+    best_brain = population[0]
     for gen in gen_iterator:
         for controller in tqdm(population, desc="Individual", leave=False):
             test_controller(controller, model, data, to_track)
             # show_qpos_history(controller.history)
+        population.sort(key=lambda c: c.fitness())
+        best_brain = population[0]
         population.sort(key=lambda c: c.fitness(), reverse=True)
         gen_iterator.set_description_str(
             f"Highest fitness: {round(population[0].fitness(), 3)} -- Average fitness: {round(np.mean([c.fitness() for c in population]), 3)} --",
@@ -220,12 +223,9 @@ def main():
         population = population[: len(population) // 2]
         population.extend(next_gen)
 
-    for controller in tqdm(population, desc="Individual", leave=False):
-        test_controller(controller, model, data, to_track)
-
-    population.sort(key=lambda c: c.fitness())
-    save_brain(population[0])
-    save_fitness(fitness, population)
+    save_brain(best_brain)
+    save_fitness(fitness, best_brain)
+    print(fitness)
 
 
 def compile_world() -> tuple[Any, Any, Any]:
