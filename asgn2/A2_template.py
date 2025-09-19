@@ -186,7 +186,7 @@ def main():
     # Initialise world
     model, data, to_track = compile_world()
 
-    max_gens = 1
+    max_gens = 20
     gen_iterator = tqdm(range(max_gens), desc="Generation")
     fitness = np.zeros((max_gens, len(population)))
     best_brain = population[0]
@@ -194,9 +194,8 @@ def main():
         for controller in tqdm(population, desc="Individual", leave=False):
             test_controller(controller, model, data, to_track)
             # show_qpos_history(controller.history)
-        population.sort(key=lambda c: c.fitness())
-        best_brain = population[0]
         population.sort(key=lambda c: c.fitness(), reverse=True)
+        best_brain = population[0]
         gen_iterator.set_description_str(
             f"Highest fitness: {round(population[0].fitness(), 3)} -- Average fitness: {round(np.mean([c.fitness() for c in population]), 3)} --",
             refresh=False,
