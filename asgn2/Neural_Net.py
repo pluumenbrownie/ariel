@@ -153,6 +153,42 @@ class SelfAdaptiveBrain(Brain):
             ],
         }
     
+
+''' here we reuse the given random_move function and then create a NoBrain baseline which its controller calls'''
+
+# Keep track of data / history
+HISTORY = []
+CROSSOVER_THRESHOLD = 0.5
+MUTATION_THRESHOLD = 0.05
+
+rng = np.random.default_rng()
+def random_move(model, data, to_track) -> None:
+
+    # Get the number of joints
+    num_joints = model.nu
+
+    # Hinges take values between -pi/2 and pi/2
+    hinge_range = np.pi / 2
+    rand_moves = np.random.uniform(
+        low=-hinge_range, high=hinge_range, size=num_joints  # -pi/2  # pi/2
+    )
+
+    # There are 2 ways to make movements:
+    # 1. Set the control values directly (this might result in junky physics)
+    # data.ctrl = rand_moves
+
+    # 2. Add to the control values with a delta (this results in smoother physics)
+    delta = 0.05
+    data.ctrl += rand_moves * delta
+
+    # Bound the control values to be within the hinge limits.
+    # If a value goes outside the bounds it might result in jittery movement.
+    data.ctrl = np.clip(data.ctrl, -np.pi / 2, np.pi / 2)
+
+    # Save movement to history
+    HISTORY.append(to_track[0].xpos.copy())
+
+
 class NoBrain(Brain):
 '''A brain controlled by random movements only - serves as our baseline'''
 
@@ -164,7 +200,6 @@ class NoBrain(Brain):
 
     def control(self, model: Any, data: Any, to_track: Any):
         # for the controller we utilize the given random_move() function
-        from A2_template import random_move
         random_move(model, data, to_track)
         # Keep track of movement history, using the same data as the global HISTORY
         self.history.append(to_track[0].xpos.copy())
