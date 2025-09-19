@@ -27,13 +27,13 @@ import json
 HISTORY = []
 
 
-def save(brain: Brain) -> None:
+def save_brain(brain: Brain) -> None:
     """Save the brain to a file."""
     with open(f"__data__/{type(brain).__name__}.json", "w") as f:
         json.dump(brain.export(), f, indent=4)
 
 
-def load(filename: str) -> Brain:
+def load_brain(filename: str) -> Brain:
     """Load a brain from a file."""
     with open(filename, "r") as f:
         data = json.load(f)
@@ -59,6 +59,14 @@ def load(filename: str) -> Brain:
             return UniformBrain(layers)
         elif data["name"] == "SelfAdaptiveBrain":
             return SelfAdaptiveBrain(layers, mutation_rate=data["mutation_rate"])
+
+def save_fitness(weights: np.ndarray, brain: Brain) -> None:
+    """Save the fitness values to a file."""
+    np.save(f"__data__/{type(brain).__name__}_fitness.npy", weights)
+
+def load_fitness(filename: str) -> np.ndarray:
+    """Load the fitness values from a file."""
+    return np.load(filename)
 
 
 def random_move(model, data, to_track) -> None:
@@ -180,17 +188,22 @@ def main():
 
     max_gens = 20
     gen_iterator = tqdm(range(max_gens), desc="Generation")
+    fitness = np.zeros((max_gens, len(population)))
+    best_brain = population[0]
     for gen in gen_iterator:
         for controller in tqdm(population, desc="Individual", leave=False):
             test_controller(controller, model, data, to_track)
             # show_qpos_history(controller.history)
         population.sort(key=lambda c: c.fitness(), reverse=True)
+        best_brain = population[0]
         gen_iterator.set_description_str(
             f"Highest fitness: {round(population[0].fitness(), 3)} -- Average fitness: {round(np.mean([c.fitness() for c in population]), 3)} --",
             refresh=False,
         )
         plotter.add([c.fitness() for c in population], gen)
         plotter.savefig()
+
+        fitness[gen, :] = [c.fitness() for c in population]
 
         scaled_fitnesses = np.array(
             [c.fitness() - population[-1].fitness() for c in population]
@@ -208,6 +221,10 @@ def main():
 
         population = population[: len(population) // 2]
         population.extend(next_gen)
+
+    save_brain(best_brain)
+    save_fitness(fitness, best_brain)
+    print(fitness)
 
 
 def compile_world() -> tuple[Any, Any, Any]:
