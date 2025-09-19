@@ -76,17 +76,20 @@ class Brain:
 
         return [left, right]
 
-    def mutate(self):
-        raise NotImplementedError()
-
-    def copy(self) -> Self:
-        raise NotImplementedError()
-
     def fitness(self) -> float:
         if self._fitness:
             return self._fitness
         self._fitness = self.history[0][1] - self.history[-1][1]
         return self._fitness
+
+    def mutate(self):
+        raise NotImplementedError()
+
+    def copy(self):
+        raise NotImplementedError()
+
+    def export(self) -> dict:
+        raise NotImplementedError()
 
 class UniformBrain(Brain):
     def __init__(self, layers: list[Layer]) -> None:
@@ -101,6 +104,20 @@ class UniformBrain(Brain):
 
     def copy(self) -> Self:
         return UniformBrain([Layer(l.input_size, l.output_size, l.function) for l in self.layers])
+
+    def export(self) -> dict:
+        return {
+            "name": type(self).__name__,
+            "layers": [
+                {
+                    "input_size": layer.input_size,
+                    "output_size": layer.output_size,
+                    "weights": layer.weights.tolist(),
+                    "function": layer.function.__name__,
+                }
+                for layer in self.layers
+            ],
+        }
 
 class SelfAdaptiveBrain(Brain):
     def __init__(self, layers: list[Layer], mutation_rate: float) -> None:
@@ -121,3 +138,18 @@ class SelfAdaptiveBrain(Brain):
 
     def copy(self) -> Self:
         return SelfAdaptiveBrain([Layer(l.input_size, l.output_size, l.function) for l in self.layers], self.mutation_rate)
+
+    def export(self) -> dict:
+        return {
+            "name": type(self).__name__,
+            "mutation_rate": self.mutation_rate,
+            "layers": [
+                {
+                    "input_size": layer.input_size,
+                    "output_size": layer.output_size,
+                    "weights": layer.weights.tolist(),
+                    "function": layer.function.__name__,
+                }
+                for layer in self.layers
+            ],
+        }
