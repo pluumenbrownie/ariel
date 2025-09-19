@@ -1,5 +1,5 @@
 # Third-party libraries
-from typing import Any, Self
+from typing import Any, Self, Type
 import numpy as np
 import mujoco
 from mujoco import viewer
@@ -156,13 +156,13 @@ def sigmoid_output(x):
     return np.pi * (sigmoid(x) - 0.5)
 
 
-def main():
+def main(brain_type: Type):
     """Main function to run the simulation with random movements."""
     # Initialise controller to controller to None, always in the beginning.
     mujoco.set_mjcb_control(None)  # DO NOT REMOVE
 
     population = [
-        SelfAdaptiveBrain(
+        brain_type(
             [
                 Layer(15, 50, sigmoid),
                 Layer(50, 30, sigmoid),
