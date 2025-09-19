@@ -23,11 +23,8 @@ class Layer:
 
 class Brain:
     def __init__(self, layers: list[Layer]) -> None:
-        self.id = id
         self.layers = layers
-
         self.history: list[list[float]] = []
-
         self._fitness: None | float = None
 
     def random(self) -> Self:
@@ -120,6 +117,8 @@ class UniformBrain(Brain):
         }
 
 class SelfAdaptiveBrain(Brain):
+    ''' This is for a brain variant which uses self-adaptive mutation rates'''
+
     def __init__(self, layers: list[Layer], mutation_rate: float) -> None:
         super().__init__(layers)
         self.mutation_rate = mutation_rate
@@ -153,3 +152,44 @@ class SelfAdaptiveBrain(Brain):
                 for layer in self.layers
             ],
         }
+    
+class NoBrain(Brain):
+'''A brain controlled by random movements only - serves as our baseline'''
+
+    def __init__(self) -> None:
+        super().__init__(layers=[])
+
+    def random(self) -> Self:
+        return self
+
+    def control(self, model: Any, data: Any, to_track: Any):
+        # for the controller we utilize the given random_move() function
+        from A2_template import random_move
+        random_move(model, data, to_track)
+        # Keep track of movement history, using the same data as the global HISTORY
+        self.history.append(to_track[0].xpos.copy())
+
+    def fitness(self) -> float:
+        if self._fitness is not None:
+            return self._fitness
+        if len(self.history) < 2:
+            self._fitness = 0.0
+        else:
+            self._fitness = self.history[0][1] - self.history[-1][1]
+        return self._fitness
+
+    def mutate(self):
+        # no mutation possible 
+        pass
+
+    def copy(self) -> Self:
+        return NoBrain()
+
+    def export(self) -> dict:
+        return {
+            "name": type(self).__name__,
+            "layers": [],
+            "description": "Random baseline using random_move"
+        }
+    
+
