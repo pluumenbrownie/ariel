@@ -6,6 +6,7 @@ from mujoco import viewer
 import matplotlib.pyplot as plt
 import matplotlib
 import random as rd
+from enum import Enum
 
 from tqdm import tqdm
 
@@ -25,6 +26,11 @@ import json
 
 # Keep track of data / history
 HISTORY = []
+
+
+class BrainType(Enum):
+    ADAPTIVE = SelfAdaptiveBrain
+    UNIFORM = UniformBrain
 
 
 def save_brain(brain: Brain) -> None:
@@ -60,9 +66,11 @@ def load_brain(filename: str) -> Brain:
         elif data["name"] == "SelfAdaptiveBrain":
             return SelfAdaptiveBrain(layers, mutation_rate=data["mutation_rate"])
 
+
 def save_fitness(weights: np.ndarray, brain: Brain) -> None:
     """Save the fitness values to a file."""
     np.save(f"__data__/{type(brain).__name__}_fitness.npy", weights)
+
 
 def load_fitness(filename: str) -> np.ndarray:
     """Load the fitness values from a file."""
@@ -164,13 +172,14 @@ def sigmoid_output(x):
     return np.pi * (sigmoid(x) - 0.5)
 
 
-def main(brain_type: Type):
+def main(brain_type: BrainType, pop_size: int, max_gens: int):
     """Main function to run the simulation with random movements."""
     # Initialise controller to controller to None, always in the beginning.
     mujoco.set_mjcb_control(None)  # DO NOT REMOVE
 
+    brain = brain_type.value
     population = [
-        brain_type(
+        brain(
             [
                 Layer(15, 50, sigmoid),
                 Layer(50, 30, sigmoid),
@@ -178,7 +187,7 @@ def main(brain_type: Type):
             ],
             mutation_rate=rd.random(),
         ).random()
-        for _ in range(100)
+        for _ in range(pop_size)
     ]
 
     plotter = FitnessPlotter()
@@ -186,7 +195,6 @@ def main(brain_type: Type):
     # Initialise world
     model, data, to_track = compile_world()
 
-    max_gens = 20
     gen_iterator = tqdm(range(max_gens), desc="Generation")
     fitness = np.zeros((max_gens, len(population)))
     best_brain = population[0]
@@ -280,4 +288,4 @@ def test_controller(controller: Brain, model: Any, data: Any, to_track: Any):
 
 
 if __name__ == "__main__":
-    main()
+    main(SelfAdaptiveBrain, 100, 20)
