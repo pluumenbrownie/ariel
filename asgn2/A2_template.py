@@ -1,11 +1,12 @@
 # Third-party libraries
-from typing import Any, Self
+from typing import Any, Self, Type
 import numpy as np
 import mujoco
 from mujoco import viewer
 import matplotlib.pyplot as plt
 import matplotlib
 import random as rd
+from enum import Enum
 
 from tqdm import tqdm
 
@@ -18,7 +19,7 @@ from ariel.simulation.environments.simple_flat_world import SimpleFlatWorld
 # import prebuilt robot phenotypes
 from ariel.body_phenotypes.robogen_lite.prebuilt_robots.gecko import gecko
 
-from Neural_Net import Brain, Layer, UniformBrain, SelfAdaptiveBrain
+from Neural_Net import Brain, Layer, UniformBrain, SelfAdaptiveBrain, NoBrain
 from plotters import FitnessPlotter
 
 import json
@@ -27,9 +28,21 @@ import json
 HISTORY = []
 
 
-def save_brain(brain: Brain) -> None:
+class BrainType(Enum):
+    ADAPTIVE = SelfAdaptiveBrain
+    UNIFORM = UniformBrain
+    NOBRAIN = NoBrain
+
+
+def save_brain(
+    brain: Brain,
+    save_dir: str = "__data__",
+    postfix: str = "",
+) -> None:
     """Save the brain to a file."""
-    with open(f"__data__/{type(brain).__name__}.json", "w") as f:
+    with open(
+        f"{save_dir}/{type(brain).__name__}{"_" if postfix else ""}{postfix}.json", "w"
+    ) as f:
         json.dump(brain.export(), f, indent=4)
 
 
@@ -59,71 +72,28 @@ def load_brain(filename: str) -> Brain:
             return UniformBrain(layers)
         elif data["name"] == "SelfAdaptiveBrain":
             return SelfAdaptiveBrain(layers, mutation_rate=data["mutation_rate"])
+        elif data["name"] == "NoBrain":
+            return NoBrain()
+        else:
+            raise ValueError(f"{data["name"]}: Invalid brain type.")
 
-def save_fitness(weights: np.ndarray, brain: Brain) -> None:
+
+def save_fitness(
+    weights: np.ndarray,
+    brain: Brain,
+    save_dir: str = "__data__",
+    postfix: str = "",
+) -> None:
     """Save the fitness values to a file."""
-    np.save(f"__data__/{type(brain).__name__}_fitness.npy", weights)
+    np.save(
+        f"{save_dir}/{type(brain).__name__}_fitness{"_" if postfix else ""}{postfix}.npy",
+        weights,
+    )
+
 
 def load_fitness(filename: str) -> np.ndarray:
     """Load the fitness values from a file."""
     return np.load(filename)
-
-
-def random_move(model, data, to_track) -> None:
-    """Generate random movements for the robot's joints.
-
-    The mujoco.set_mjcb_control() function will always give
-    model and data as inputs to the function. Even if you don't use them,
-    you need to have them as inputs.
-
-    Parameters
-    ----------
-
-    model : mujoco.MjModel
-        The MuJoCo model of the robot.
-    data : mujoco.MjData
-        The MuJoCo data of the robot.
-
-    Returns
-    -------
-    None
-        This function modifies the data.ctrl in place.
-    """
-
-    # Get the number of joints
-    num_joints = model.nu
-
-    # Hinges take values between -pi/2 and pi/2
-    hinge_range = np.pi / 2
-    rand_moves = np.random.uniform(
-        low=-hinge_range, high=hinge_range, size=num_joints  # -pi/2  # pi/2
-    )
-
-    # There are 2 ways to make movements:
-    # 1. Set the control values directly (this might result in junky physics)
-    # data.ctrl = rand_moves
-
-    # 2. Add to the control values with a delta (this results in smoother physics)
-    delta = 0.05
-    data.ctrl += rand_moves * delta
-
-    # Bound the control values to be within the hinge limits.
-    # If a value goes outside the bounds it might result in jittery movement.
-    data.ctrl = np.clip(data.ctrl, -np.pi / 2, np.pi / 2)
-
-    # Save movement to history
-    HISTORY.append(to_track[0].xpos.copy())
-
-    ##############################################
-    #
-    # Take all the above into consideration when creating your controller
-    # The input size, output size, output range
-    # Your network might return ranges [-1,1], so you will need to scale it
-    # to the expected [-pi/2, pi/2] range.
-    #
-    # Or you might not need a delta and use the direct controller outputs
-    #
-    ##############################################
 
 
 def show_qpos_history(history: list):
@@ -164,13 +134,20 @@ def sigmoid_output(x):
     return np.pi * (sigmoid(x) - 0.5)
 
 
-def main():
+def main(
+    brain_type: BrainType,
+    pop_size: int,
+    max_gens: int,
+    save_dir: str = "__data__",
+    postfix: str = "",
+):
     """Main function to run the simulation with random movements."""
     # Initialise controller to controller to None, always in the beginning.
     mujoco.set_mjcb_control(None)  # DO NOT REMOVE
 
+    brain = brain_type.value
     population = [
-        SelfAdaptiveBrain(
+        brain(
             [
                 Layer(15, 50, sigmoid),
                 Layer(50, 30, sigmoid),
@@ -178,7 +155,7 @@ def main():
             ],
             mutation_rate=rd.random(),
         ).random()
-        for _ in range(100)
+        for _ in range(pop_size)
     ]
 
     plotter = FitnessPlotter()
@@ -186,7 +163,6 @@ def main():
     # Initialise world
     model, data, to_track = compile_world()
 
-    max_gens = 20
     gen_iterator = tqdm(range(max_gens), desc="Generation")
     fitness = np.zeros((max_gens, len(population)))
     best_brain = population[0]
@@ -201,7 +177,7 @@ def main():
             refresh=False,
         )
         plotter.add([c.fitness() for c in population], gen)
-        plotter.savefig()
+        plotter.savefig(save_dir=save_dir, postfix=postfix)
 
         fitness[gen, :] = [c.fitness() for c in population]
 
@@ -222,8 +198,9 @@ def main():
         population = population[: len(population) // 2]
         population.extend(next_gen)
 
-    save_brain(best_brain)
-    save_fitness(fitness, best_brain)
+    save_brain(best_brain, save_dir=save_dir, postfix=postfix)
+    save_fitness(fitness, best_brain, save_dir=save_dir, postfix=postfix)
+    plotter.savedata(save_dir=save_dir, postfix=postfix)
     print(fitness)
 
 
@@ -280,4 +257,4 @@ def test_controller(controller: Brain, model: Any, data: Any, to_track: Any):
 
 
 if __name__ == "__main__":
-    main()
+    main(SelfAdaptiveBrain, 100, 20)
