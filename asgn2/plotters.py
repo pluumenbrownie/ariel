@@ -1,10 +1,11 @@
 import numpy as np
 from numpy.typing import NDArray
 import matplotlib.pyplot as plt
+import csv
 
 plt.rcParams["figure.constrained_layout.use"] = True
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, asdict
 
 
 @dataclass
@@ -42,7 +43,7 @@ class FitnessPlotter:
     def min(self) -> NDArray:
         return np.array([p.lowest for p in self.history])
 
-    def savefig(self, postscript: None | str = None):
+    def savefig(self, save_dir: str = "__data__", postfix: None | str = None):
         plt.plot(self.generations(), self.mean(), "b-", label="Average")
         plt.fill_between(
             self.generations(),
@@ -59,5 +60,14 @@ class FitnessPlotter:
         plt.title("Average fitness")
         plt.legend(loc="lower right")
 
-        plt.savefig(f"__data__/mean_fitness{"_" if postscript else ""}{postscript}.png")
+        plt.savefig(f"{save_dir}/mean_fitness{"_" if postfix else ""}{postfix}.png")
         plt.close()
+
+    def savedata(self, save_dir: str = "__data__", postfix: str = ""):
+        with open(
+            f"{save_dir}/fitness_progression{"_" if postfix else ""}{postfix}.csv", "w"
+        ) as file:
+            field_names = [field.name for field in fields(Datapoint)]
+            writer = csv.DictWriter(file, field_names)
+            writer.writeheader()
+            writer.writerows([asdict(point) for point in self.history])
