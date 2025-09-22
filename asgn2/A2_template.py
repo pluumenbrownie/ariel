@@ -195,8 +195,8 @@ def main(
             next_gen.append(c1)
             next_gen.append(c2)
 
-        population = population[: len(population) // 2]
-        population.extend(next_gen)
+        next_gen.extend([c.copy() for c in population[: len(population) // 2]])
+        population = next_gen
 
     save_brain(best_brain, save_dir=save_dir, postfix=postfix)
     save_fitness(fitness, best_brain, save_dir=save_dir, postfix=postfix)
