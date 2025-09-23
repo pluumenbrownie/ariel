@@ -94,6 +94,9 @@ class Brain:
     def copy(self):
         raise NotImplementedError()
 
+    def reset(self) -> "Brain":
+        raise NotImplementedError()
+
     def export(self) -> dict:
         raise NotImplementedError()
 
@@ -115,6 +118,9 @@ class UniformBrain(Brain):
         return UniformBrain(
             [Layer(l.input_size, l.output_size, l.function) for l in self.layers], 0.0
         )
+
+    def reset(self) -> "UniformBrain":
+        return UniformBrain(self.layers, 0.0)
 
     def export(self) -> dict:
         return {
@@ -157,6 +163,9 @@ class SelfAdaptiveBrain(Brain):
             [Layer(l.input_size, l.output_size, l.function) for l in self.layers],
             self.mutation_rate,
         )
+
+    def reset(self) -> "SelfAdaptiveBrain":
+        return SelfAdaptiveBrain(self.layers, self.mutation_rate)
 
     def export(self) -> dict:
         return {
@@ -259,6 +268,9 @@ class NoBrain(Brain):
         pass
 
     def copy(self) -> "NoBrain":
+        return NoBrain([], 0.0)
+
+    def reset(self) -> Brain:
         return NoBrain([], 0.0)
 
     def export(self) -> dict:
