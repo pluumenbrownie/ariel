@@ -71,3 +71,128 @@ class FitnessPlotter:
             writer = csv.DictWriter(file, field_names)
             writer.writeheader()
             writer.writerows([asdict(point) for point in self.history])
+
+
+def plot_data():
+    with open("asgn2/results/fitness_progression_nobrain_1.csv") as file:
+        reader = csv.DictReader(file)
+        nobrain_1_mean = np.array([float(row["mean"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        nobrain_1_std = np.array([float(row["std"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        nobrain_1_max = np.array([float(row["highest"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        nobrain_1_min = np.array([float(row["lowest"]) for row in reader])
+
+    with open("asgn2/results/fitness_progression_nobrain_2.csv") as file:
+        reader = csv.DictReader(file)
+        nobrain_2_mean = np.array([float(row["mean"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        nobrain_2_std = np.array([float(row["std"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        nobrain_2_max = np.array([float(row["highest"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        nobrain_2_min = np.array([float(row["lowest"]) for row in reader])
+
+    with open("asgn2/results/fitness_progression_nobrain_3.csv") as file:
+        reader = csv.DictReader(file)
+        nobrain_3_mean = np.array([float(row["mean"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        nobrain_3_std = np.array([float(row["std"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        nobrain_3_max = np.array([float(row["highest"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        nobrain_3_min = np.array([float(row["lowest"]) for row in reader])
+
+    with open("asgn2/results/fitness_progression_uniform_1.csv") as file:
+        reader = csv.DictReader(file)
+        uniform_1_mean = np.array([float(row["mean"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        uniform_1_std = np.array([float(row["std"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        uniform_1_max = np.array([float(row["highest"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        uniform_1_min = np.array([float(row["lowest"]) for row in reader])
+
+    with open("asgn2/results/fitness_progression_uniform_2.csv") as file:
+        reader = csv.DictReader(file)
+        uniform_2_mean = np.array([float(row["mean"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        uniform_2_std = np.array([float(row["std"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        uniform_2_max = np.array([float(row["highest"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        uniform_2_min = np.array([float(row["lowest"]) for row in reader])
+
+    with open("asgn2/results/fitness_progression_uniform_3.csv") as file:
+        reader = csv.DictReader(file)
+        uniform_3_mean = np.array([float(row["mean"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        uniform_3_std = np.array([float(row["std"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        uniform_3_max = np.array([float(row["highest"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        uniform_3_min = np.array([float(row["lowest"]) for row in reader])
+
+    with open("asgn2/results/fitness_progression_selfadaptive_1.csv") as file:
+        reader = csv.DictReader(file)
+        selfadaptive_1_mean = np.array([float(row["mean"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        selfadaptive_1_std = np.array([float(row["std"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        selfadaptive_1_max = np.array([float(row["highest"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        selfadaptive_1_min = np.array([float(row["lowest"]) for row in reader])
+
+    with open("asgn2/results/fitness_progression_selfadaptive_2.csv") as file:
+        reader = csv.DictReader(file)
+        selfadaptive_2_mean = np.array([float(row["mean"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        selfadaptive_2_std = np.array([float(row["std"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        selfadaptive_2_max = np.array([float(row["highest"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        selfadaptive_2_min = np.array([float(row["lowest"]) for row in reader])
+
+    with open("asgn2/results/fitness_progression_selfadaptive_3.csv") as file:
+        reader = csv.DictReader(file)
+        selfadaptive_3_mean = np.array([float(row["mean"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        selfadaptive_3_std = np.array([float(row["std"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        selfadaptive_3_max = np.array([float(row["highest"]) for row in reader])
+        file.seek(0)
+        next(reader)
+        selfadaptive_3_min = np.array([float(row["lowest"]) for row in reader])
+
+    nobrain_mean = (nobrain_1_mean + nobrain_2_mean + nobrain_3_mean) / 3
+
+
+if __name__ == "__main__":
+    plot_data()
