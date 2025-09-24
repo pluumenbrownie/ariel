@@ -1,11 +1,22 @@
 import click
 
 from enum import Enum
+from A2_template import main, BrainType, load_brain, compile_world
+import mujoco
+from mujoco import viewer
 
-from A2_template import main, BrainType
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+def cli(ctx):
+    # if ctx.invoked_subcommand is None:
+    #     click.echo('I was invoked without subcommand')
+    # else:
+    #     click.echo(f"I am about to invoke {ctx.invoked_subcommand}")
+    pass
 
 
-@click.command()
+@cli.command()
 @click.option(
     "--type",
     "-t",
@@ -47,5 +58,18 @@ def run(
     main(brain_type, pop_size, max_gens, postfix=postfix, save_dir=save_dir)
 
 
+@cli.command()
+@click.argument("brain_file", type=click.Path(exists=True))
+def show(brain_file):
+    mujoco.set_mjcb_control(None)  # DO NOT REMOVE
+    model, data, to_track = compile_world()
+    controller = load_brain(brain_file)
+    mujoco.set_mjcb_control(lambda m, d: controller.control(model, data, to_track))
+    viewer.launch(
+        model=model,  # type: ignore
+        data=data,
+    )
+
+
 if __name__ == "__main__":
-    run()
+    cli()
