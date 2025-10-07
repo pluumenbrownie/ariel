@@ -191,19 +191,28 @@ class EvolutionaryAlgorithm:
                     robot=robot, mode="launcher" if self.viewer else "complicated"
                 )
                 brains_fitness.append((brain, robot.fitness()))
+
             brains_fitness.sort(key=fitness_key, reverse=True)
             best_brain = brains_fitness[0]
-
             fitness[generation, :] = [pair[1] for pair in brains_fitness]
+
+            # solves a type hinting problem
+            if generation == self.brain_generations - 1:
+                return ((robot_body, best_brain[0]), best_brain[1])
+            # Stop early if brain fitness is not changing
+            # I think this is a good idea, well see
+            if generation > 0:
+                mean_fitness_change = np.mean(
+                    fitness[generation, :] - fitness[generation - 1, :]
+                )
+                if abs(mean_fitness_change) < 0.001:
+                    return ((robot_body, best_brain[0]), best_brain[1])
 
             weights = self.linear_windowed_weights(brains_fitness)
 
             next_gen = self.children_brains(brains_fitness, weights)
             brains = next_gen
 
-            # solves a type hinting problem
-            if generation == self.brain_generations - 1:
-                return ((robot_body, best_brain[0]), best_brain[1])
         raise ValueError("self.brain_generations must be at least 1.")
 
     def save_state(

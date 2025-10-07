@@ -32,7 +32,7 @@ class RobotBody:
         return type(self)(self.genotype.copy(), self.num_modules)
 
     def mutation(self) -> Self:
-        P = 0.05
+        P = 0.10
 
         for vec in self.genotype:
             selection = NP_RNG.random(vec.shape) <= P
