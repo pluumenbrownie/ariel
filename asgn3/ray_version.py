@@ -45,7 +45,7 @@ class EvolutionaryAlgorithmSettings:
         self.genotype_size = 64
         self.body_generations = 256
         self.body_population_size = 100
-        self.brain_generations = 10
+        self.brain_generations = 100
         self.brain_population_size = 100
         # self.body_generations = 10
         # self.body_population_size = 8
@@ -178,12 +178,11 @@ def evolve_brains(
         if generation == settings.brain_generations - 1:
             return ((robot_body, best_brain[0]), best_brain[1])
         # Stop early if brain fitness is not changing
-        # I think this is a good idea, well see
-        if generation > 0:
-            mean_fitness_change = np.mean(
-                fitness[generation, :] - fitness[generation - 1, :]
-            )
-            if abs(mean_fitness_change) < 0.001:
+        # I think this is a good idea, we'll see
+        if generation > 4:
+            last_five_fitness = np.mean(fitness[generation - 4 : generation, :], axis=1)
+            largest_fitness_change = max(np.diff(abs(last_five_fitness)))
+            if abs(largest_fitness_change) < 0.0005:
                 return ((robot_body, best_brain[0]), best_brain[1])
 
         weights = linear_windowed_weights(brains_fitness)

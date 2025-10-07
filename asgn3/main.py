@@ -201,11 +201,12 @@ class EvolutionaryAlgorithm:
                 return ((robot_body, best_brain[0]), best_brain[1])
             # Stop early if brain fitness is not changing
             # I think this is a good idea, well see
-            if generation > 0:
-                mean_fitness_change = np.mean(
-                    fitness[generation, :] - fitness[generation - 1, :]
+            if generation > 4:
+                last_five_fitness = np.mean(
+                    fitness[generation - 4 : generation, :], axis=1
                 )
-                if abs(mean_fitness_change) < 0.001:
+                largest_fitness_change = max(np.diff(abs(last_five_fitness)))
+                if largest_fitness_change < 0.0005:
                     return ((robot_body, best_brain[0]), best_brain[1])
 
             weights = self.linear_windowed_weights(brains_fitness)
