@@ -34,6 +34,7 @@ dependencies = [
     "pillow>=11.3.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
+    "ray>=2.49.2",
     "rich>=14.1.0",
     "shibuya>=2025.8.16",
     "sphinx-autoapi>=3.6.0",

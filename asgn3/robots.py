@@ -29,7 +29,8 @@ class RobotBody:
         self.num_modules = num_modules
 
     def copy(self) -> "RobotBody":
-        return type(self)(self.genotype.copy(), self.num_modules)
+        new_genotype = np.copy(self.genotype)
+        return type(self)(new_genotype, self.num_modules)
 
     def mutation(self) -> Self:
         P = 0.10
