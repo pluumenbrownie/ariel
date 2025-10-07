@@ -67,6 +67,13 @@ class RobotBody:
 
         return [left, right]
 
+    def export(self) -> dict[str, Any]:
+        return {
+            "type": str(type(self).__name__),
+            "genotype": [vec.tolist() for vec in self.genotype],
+            "num_modules": self.num_modules,
+        }
+
 
 class RandomRobotBody(RobotBody):
     def __init__(
@@ -103,6 +110,9 @@ class Layer:
     def forward(self, inputs: np.ndarray) -> np.ndarray:
         return self.function(np.dot(inputs, self.weights))
 
+    def export(self) -> list[list[float]]:
+        return self.weights.tolist()
+
     def __repr__(self) -> str:
         return f"Layer({self.input_size}, {self.output_size})"
 
@@ -136,6 +146,13 @@ class Brain:
 
     def copy(self) -> "Brain":
         raise NotImplementedError()
+
+    def export(self) -> dict[str, Any]:
+        """Fyi RandomBrain doesnt work with this yet."""
+        return {
+            "type": str(type(self).__name__),
+            "genotype": [layer.export() for layer in self.layers],
+        }
 
 
 class TestBrain(Brain):
@@ -286,7 +303,8 @@ class Robot:
         x = self.tracker.history["xpos"][0][-1][0]
         x = abs(x)
         y = self.tracker.history["xpos"][0][-1][1]
-        return y - x
+        bonus = self.tracker.history["bonus"]
+        return y - x + bonus
 
 
 def random_body_genotype(genotype_size: int) -> list[NDArray[np.float32]]:
@@ -301,3 +319,8 @@ def random_body_genotype(genotype_size: int) -> list[NDArray[np.float32]]:
     ]
 
     return genotype
+
+
+TYPE_MAP = {
+    "RandomRobotBody": RandomRobotBody,
+}
