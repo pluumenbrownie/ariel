@@ -132,7 +132,7 @@ class EvolutionaryAlgorithm:
         robot_bodies: list[RobotBody],
         fitness: NDArray[np.float32],
         generations: Iterator[int],
-    ):
+    ) -> tuple[tuple[RobotBody, Brain], float]:
         for generation in generations:
             print(f"Gen {generation}")
             # Use multiprocessing to speed up computations
@@ -176,7 +176,7 @@ class EvolutionaryAlgorithm:
         brains = self.generate_brains(robot_body)
 
         best_brain: tuple[Brain, float]
-        fitness = np.zeros((self.body_generations, self.body_population_size))
+        fitness = np.zeros((self.brain_generations, self.body_population_size))
 
         for generation in range(self.brain_generations):
             brains_fitness: list[tuple[Brain, float]] = []
