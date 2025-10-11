@@ -269,7 +269,9 @@ class TrainingBrain(Brain):
                 gene["activation_function"] == "tanh"
             ), f"Incorrect function name {gene["activation_function"]}."
             arr = np.array(gene["weights"])
+            # print(arr)
             layer = Layer(*arr.shape, function=np.tanh)
+            layer.weights = arr
             brain.layers.append(layer)
 
         return brain
