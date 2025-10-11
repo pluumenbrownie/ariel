@@ -517,6 +517,115 @@ class EvolutionaryAlgorithm:
             robot_bodies.append((body, fitness))
 
         return robot_bodies
+    
+    '''
+      BASELINE experiment: random search for non-evolution of brain and body
+    '''
+    
+    def run_baseline(
+        self, parallel: bool = True
+    ) -> tuple[tuple[RobotBody, Brain], float]:
+        """
+        Baseline experiment: Pure random search with no evolution.
+        Each generation gets completely new random bodies and random brains.
+        """
+        print(f"Started Baseline run (random search, {parallel = })")
+    
+        fitness = np.zeros((self.body_generations, self.body_population_size))
+
+        '''to create separate directory for baseline results we do:
+        now = time.localtime()
+        baseline_dir = Path(
+            f"__data__/baseline_run_"
+            + f"{now.tm_year}_{now.tm_mon:02}_{now.tm_mday:02}_"
+            + f"{now.tm_hour:02}:{now.tm_min:02}:{now.tm_sec:02}"
+        )'''
+        baseline_dir = self.dir_name / "baseline"
+        os.mkdir(baseline_dir)
+    
+        plotter = LivePlotter(fitness, baseline_dir)
+
+        # Save NDE for reproducibility
+        with open(baseline_dir.joinpath("nde.json"), "w") as file:
+            output = export_nde(self.nde)
+            json.dump(output, file)
+    
+        best_overall: tuple[tuple[RobotBody, Brain], float] | None = None
+
+        for generation in range(self.body_generations):
+            print(f"Baseline Gen {generation}")
+        
+            # Generate completely NEW random bodies each generation (no evolution)
+            robot_bodies = self.generate_bodies_preselect()
+        
+            # Evaluate each body with a random brain (no learning)
+            if parallel:
+                with Pool(processes=self.processes) as pool:
+                    bodies_fitness = list(
+                        tqdm(
+                            pool.imap_unordered(self.evaluate_random_brain, robot_bodies),
+                            total=self.body_population_size,
+                        )
+                    )
+            else:
+                bodies_fitness = list(
+                    tqdm(
+                        map(self.evaluate_random_brain, robot_bodies),
+                        total=self.body_population_size,
+                    )
+                )
+
+            # Sort to find best of this generation
+            bodies_fitness.sort(key=fitness_key, reverse=True)
+            best_robot = bodies_fitness[0]
+            print(f"Best baseline robot fitness: {best_robot[1]}")
+        
+            # Track best overall across all generations
+            if best_overall is None or best_robot[1] > best_overall[1]:
+                best_overall = best_robot
+        
+            # Save state
+            self.save_state_baseline(generation, bodies_fitness, baseline_dir)
+            fitness[generation, :] = [r[1] for r in bodies_fitness]
+            plotter.plot()   
+
+        assert best_overall is not None, "No generations were run"   #typecheck!
+        print(f"Best overall baseline fitness: {best_overall[1]}")
+        print(fitness)
+    
+        return best_overall
+
+
+    def evaluate_random_brain(
+        self,
+        robot_body: RobotBody,
+    ) -> tuple[tuple[RobotBody, Brain], float]:
+        input_size, output_size = self.get_input_output_sizes(robot_body)
+        # create a random 'brain' for the robot using Class RandomBrain
+        brain = RandomBrain(input_size, output_size)
+        robot = Robot(robot_body, brain)
+        self.experiment(robot=robot)
+        return ((robot_body, brain), robot.fitness())
+    
+    def save_state_baseline(
+        self,
+        generation: int,
+        bodies_fitness: list[tuple[tuple[RobotBody, Brain], float]],
+        directory: Path,
+    ) -> None:
+        generation_state = []
+        for bot in bodies_fitness:
+            bot_data = {}
+            bot_data["body"] = bot[0][0].export()
+            bot_data["brain"] = bot[0][1].export()
+            bot_data["fitness"] = bot[1]
+            generation_state.append(bot_data)
+        with open(
+            directory.joinpath(Path(f"gen_{generation:04}.json")), "w"
+        ) as file:
+            file.writelines(json.dumps(generation_state, indent=2))
+    
+
 
 
 def termination_function(time: float, robot: Robot) -> bool:
