@@ -185,6 +185,7 @@ class TestBrain(Brain):
     """Class to determine input and output layer sizes for robot controllers."""
 
     def __init__(self) -> None:
+        super().__init__(input_size=0, output_size=0)
         self.input_size = None
         self.output_size = None
 
@@ -200,6 +201,7 @@ class RandomBrain(Brain):
         input_size: int,
         output_size: int,
     ) -> None:
+        super().__init__(input_size=0, output_size=0)
         hidden_size = 8
 
         # Initialize the networks weights randomly

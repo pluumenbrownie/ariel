@@ -23,7 +23,7 @@ def compile_world(robot: Robot) -> tuple[OlympicArena, Any, MjData]:
 
     # Spawn robot in the world
     # Check docstring for spawn conditions
-    world.spawn(robot.core.spec, spawn_position=[-0.8, 0, 0.1])
+    world.spawn(robot.core.spec, position=[-0.8, 0, 0.1])
 
     # Generate the model and data
     # These are standard parts of the simulation USE THEM AS IS, DO NOT CHANGE
@@ -46,8 +46,7 @@ def experiment(
     world, model, data = compile_world(robot)
 
     # Pass the model and data to the tracker
-    if robot.controller.tracker is not None:
-        robot.controller.tracker.setup(world.spec, data)
+    robot.controller.tracker.setup(world.spec, data)
 
     mujoco.set_mjcb_control(
         lambda m, d: robot.controller.set_control(m, d),  # type: ignore
@@ -93,4 +92,4 @@ def view(dir_path: Path, generation: int, individual_number: int) -> None:
 
 
 if __name__ == "__main__":
-    view(Path("asgn3/example2"), 0, 0)
+    view(Path("__data__/ea_run_2025_10_11_15:44:37"), 12, 3)

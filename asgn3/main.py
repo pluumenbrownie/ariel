@@ -3,10 +3,11 @@ import os
 from pathlib import Path
 import time
 from typing import Any
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from multiprocessing import Pool
 import math as mt
 import re
+from itertools import repeat
 
 from tqdm import tqdm
 import mujoco
@@ -32,7 +33,7 @@ from robots import (
     Brain,
     RandomBrain,
     SelfAdaptiveBrain,
-    TrainingBrain,
+    # TrainingBrain,
     RandomRobotBody,
     Robot,
     RobotBody,
@@ -55,14 +56,10 @@ class EvolutionaryAlgorithm:
         self.processes = 12
         self.num_modules = 20
         self.genotype_size = 64
-        self.body_generations = 2
-        self.body_population_size = 100
-        self.brain_generations = 5
+        self.body_generations = 1000
+        self.body_population_size = 8
+        self.brain_generations = 50
         self.brain_population_size = 100
-        # self.body_generations = 1
-        # self.body_population_size = 8
-        # self.brain_generations = 1
-        # self.brain_population_size = 8
 
         self.body_survival_fraction = 0.0
         self.brain_survival_fraction = 0.01
@@ -182,21 +179,16 @@ class EvolutionaryAlgorithm:
         for generation in generations:
             print(f"Gen {generation}")
             # Use multiprocessing to speed up computations
-            if parallel:
-                with Pool(processes=self.processes) as pool:
-                    bodies_fitness = list(
-                        tqdm(
-                            pool.imap_unordered(self.evolve_brains, robot_bodies),
-                            total=self.body_population_size,
-                        )
-                    )
-            else:
-                bodies_fitness = list(
-                    tqdm(
-                        map(self.evolve_brains, robot_bodies),
-                        total=self.body_population_size,
-                    )
+
+            bodies_fitness = list(
+                tqdm(
+                    (
+                        self.evolve_brains(body, parallel=parallel)
+                        for body in robot_bodies
+                    ),
+                    total=self.body_population_size,
                 )
+            )
 
             bodies_fitness.sort(key=fitness_key, reverse=True)
             best_robot = bodies_fitness[0]
@@ -219,6 +211,7 @@ class EvolutionaryAlgorithm:
         self,
         robot_body: RobotBody,
         fitness: NDArray[np.float32] | None = None,
+        parallel: bool = True,
     ) -> tuple[tuple[RobotBody, Brain], float]:
         # The bodies get fresh new brains at the start of learning
 
@@ -230,13 +223,20 @@ class EvolutionaryAlgorithm:
                 (self.brain_generations, self.brain_population_size), dtype=np.float32
             )
 
-        for generation in range(self.brain_generations):
-            brains_fitness: list[tuple[Brain, float]] = []
+        # experiment = partial(self.experiment, robot_body=robot_body)
+        progress_bar = tqdm(range(self.brain_generations), leave=False)
+        for generation in progress_bar:
 
-            for brain in brains:
-                robot = Robot(robot_body, brain)
-                self.experiment(robot=robot)
-                brains_fitness.append((brain, robot.fitness()))
+            if parallel:
+                with Pool(processes=self.processes) as pool:
+
+                    brains_fitness: list[tuple[Brain, float]] = list(
+                        pool.starmap(self.experiment, zip(repeat(robot_body), brains))
+                    )
+            else:
+                brains_fitness: list[tuple[Brain, float]] = list(
+                    map(self.experiment, repeat(robot_body), brains)
+                )
 
             brains_fitness.sort(key=fitness_key, reverse=True)
             best_brain = brains_fitness[0]
@@ -244,6 +244,7 @@ class EvolutionaryAlgorithm:
 
             # solves a type hinting problem
             if generation == self.brain_generations - 1:
+                progress_bar.close()
                 return ((robot_body, best_brain[0]), best_brain[1])
             # Stop early if brain fitness is not changing
             # I think this is a good idea, well see
@@ -253,6 +254,7 @@ class EvolutionaryAlgorithm:
                 )
                 largest_fitness_change = np.max(np.abs(np.diff(last_five_fitness)))
                 if largest_fitness_change < 0.0005:
+                    progress_bar.close()
                     return ((robot_body, best_brain[0]), best_brain[1])
 
             weights = self.exponential_ranking_weights(brains_fitness)
@@ -349,9 +351,9 @@ class EvolutionaryAlgorithm:
             genotype = random_body_genotype(self.genotype_size)
             body = RandomRobotBody(genotype, self.num_modules, self.nde)
             input_size, output_size = self.get_input_output_sizes(body)
-            robot = Robot(body, RandomBrain(input_size, output_size))
-            self.experiment(robot, duration=3, mode="complicated")
-            if robot.fitness() >= 0.1:
+            brain = RandomBrain(input_size, output_size)
+            result = self.experiment(body, brain, duration=3, mode="complicated")
+            if result[1] >= 0.1:
                 body_genotypes.append(genotype)
                 progress_bar.update()
 
@@ -364,20 +366,21 @@ class EvolutionaryAlgorithm:
 
     def experiment(
         self,
-        robot: Robot,
+        robot_body: RobotBody,
+        robot_brain: Brain,
         duration: int = 15,
         mode: str = "complicated",
-    ) -> None:
+    ) -> tuple[Brain, float]:
         """Run the simulation with random movements."""
         # ==================================================================== #
         # Initialise controller to controller to None, always in the beginning.
         mujoco.set_mjcb_control(None)  # DO NOT REMOVE
 
+        robot = Robot(robot_body, robot_brain)
         world, model, data = self.compile_world(robot)
 
         # Pass the model and data to the tracker
-        if robot.controller.tracker is not None:
-            robot.controller.tracker.setup(world.spec, data)
+        robot.controller.tracker.setup(world.spec, data)
 
         # Set the control callback function
         # This is called every time step to get the next action.
@@ -425,13 +428,14 @@ class EvolutionaryAlgorithm:
                     model=model,
                     data=data,
                 )
+        return (robot_brain, robot.fitness())
 
     def compile_world(self, robot: Robot) -> tuple[OlympicArena, Any, MjData]:
         world = OlympicArena()
 
         # Spawn robot in the world
         # Check docstring for spawn conditions
-        world.spawn(robot.core.spec, spawn_position=self.spawn_position)
+        world.spawn(robot.core.spec, position=self.spawn_position)
 
         # Generate the model and data
         # These are standard parts of the simulation USE THEM AS IS, DO NOT CHANGE
@@ -458,8 +462,7 @@ class EvolutionaryAlgorithm:
         robot = Robot(robot_body, TestBrain())
         world, model, data = self.compile_world(robot)
 
-        if robot.controller.tracker is not None:
-            robot.controller.tracker.setup(world.spec, data)
+        robot.controller.tracker.setup(world.spec, data)
 
         input_size = len(data.qpos)
         output_size = model.nu
@@ -517,11 +520,11 @@ class EvolutionaryAlgorithm:
             robot_bodies.append((body, fitness))
 
         return robot_bodies
-    
-    '''
+
+    """
       BASELINE experiment: random search for non-evolution of brain and body
-    '''
-    
+    """
+
     def run_baseline(
         self, parallel: bool = True
     ) -> tuple[tuple[RobotBody, Brain], float]:
@@ -530,40 +533,42 @@ class EvolutionaryAlgorithm:
         Each generation gets completely new random bodies and random brains.
         """
         print(f"Started Baseline run (random search, {parallel = })")
-    
+
         fitness = np.zeros((self.body_generations, self.body_population_size))
 
-        '''to create separate directory for baseline results we do:
+        """to create separate directory for baseline results we do:
         now = time.localtime()
         baseline_dir = Path(
             f"__data__/baseline_run_"
             + f"{now.tm_year}_{now.tm_mon:02}_{now.tm_mday:02}_"
             + f"{now.tm_hour:02}:{now.tm_min:02}:{now.tm_sec:02}"
-        )'''
+        )"""
         baseline_dir = self.dir_name / "baseline"
         os.mkdir(baseline_dir)
-    
+
         plotter = LivePlotter(fitness, baseline_dir)
 
         # Save NDE for reproducibility
         with open(baseline_dir.joinpath("nde.json"), "w") as file:
             output = export_nde(self.nde)
             json.dump(output, file)
-    
+
         best_overall: tuple[tuple[RobotBody, Brain], float] | None = None
 
         for generation in range(self.body_generations):
             print(f"Baseline Gen {generation}")
-        
+
             # Generate completely NEW random bodies each generation (no evolution)
             robot_bodies = self.generate_bodies_preselect()
-        
+
             # Evaluate each body with a random brain (no learning)
             if parallel:
                 with Pool(processes=self.processes) as pool:
                     bodies_fitness = list(
                         tqdm(
-                            pool.imap_unordered(self.evaluate_random_brain, robot_bodies),
+                            pool.imap_unordered(
+                                self.evaluate_random_brain, robot_bodies
+                            ),
                             total=self.body_population_size,
                         )
                     )
@@ -579,22 +584,21 @@ class EvolutionaryAlgorithm:
             bodies_fitness.sort(key=fitness_key, reverse=True)
             best_robot = bodies_fitness[0]
             print(f"Best baseline robot fitness: {best_robot[1]}")
-        
+
             # Track best overall across all generations
             if best_overall is None or best_robot[1] > best_overall[1]:
                 best_overall = best_robot
-        
+
             # Save state
             self.save_state_baseline(generation, bodies_fitness, baseline_dir)
             fitness[generation, :] = [r[1] for r in bodies_fitness]
-            plotter.plot()   
+            plotter.plot()
 
-        assert best_overall is not None, "No generations were run"   #typecheck!
+        assert best_overall is not None, "No generations were run"  # typecheck!
         print(f"Best overall baseline fitness: {best_overall[1]}")
         print(fitness)
-    
-        return best_overall
 
+        return best_overall
 
     def evaluate_random_brain(
         self,
@@ -603,10 +607,9 @@ class EvolutionaryAlgorithm:
         input_size, output_size = self.get_input_output_sizes(robot_body)
         # create a random 'brain' for the robot using Class RandomBrain
         brain = RandomBrain(input_size, output_size)
-        robot = Robot(robot_body, brain)
-        self.experiment(robot=robot)
-        return ((robot_body, brain), robot.fitness())
-    
+        result = self.experiment(robot_body, brain)
+        return ((robot_body, result[0]), result[1])
+
     def save_state_baseline(
         self,
         generation: int,
@@ -620,29 +623,22 @@ class EvolutionaryAlgorithm:
             bot_data["brain"] = bot[0][1].export()
             bot_data["fitness"] = bot[1]
             generation_state.append(bot_data)
-        with open(
-            directory.joinpath(Path(f"gen_{generation:04}.json")), "w"
-        ) as file:
+        with open(directory.joinpath(Path(f"gen_{generation:04}.json")), "w") as file:
             file.writelines(json.dumps(generation_state, indent=2))
-    
-
 
 
 def termination_function(time: float, robot: Robot) -> bool:
-    if robot.controller.tracker is not None:
-        x_start = robot.controller.tracker.history["xpos"][0][0][0]
-        x = robot.controller.tracker.history["xpos"][0][-1][0]
-        dx = x - x_start
-        robot.controller.tracker.history["bonus"] = 0.0
-        # Early culling of bad bots
-        if dx < 0.03 * time - 1 / (time + 1) + 0.2:
-            return True
-        # Early termination of fast bots, with fitness bonus
-        if dx > 5.0:
-            robot.controller.tracker.history["bonus"] = max(time - 120.0, 0.0)
-        return False
-    else:
-        raise ValueError("Robot controller not set.")
+    x_start = robot.controller.tracker.history["xpos"][0][0][0]
+    x = robot.controller.tracker.history["xpos"][0][-1][0]
+    dx = x - x_start
+    robot.controller.tracker.history["bonus"] = 0.0
+    # Early culling of bad bots
+    if dx < 0.03 * time - 1 / (time + 1) + 0.2:
+        return True
+    # Early termination of fast bots, with fitness bonus
+    if dx > 5.0:
+        robot.controller.tracker.history["bonus"] = max(time - 120.0, 0.0)
+    return False
 
 
 def fitness_key(fitness_tuple: tuple[Any, float]) -> float:
