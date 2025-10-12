@@ -710,7 +710,7 @@ def import_nde(data: dict[str, Any]) -> NeuralDevelopmentalEncoding:
 
 def main():
     ea = EvolutionaryAlgorithm()
-    best_robot = ea.run_random(parallel=True)
+    best_robot = ea.run_baseline(parallel=True)
     # best_robot = ea.resume(Path("__data__/ea_run_2025_10_11_22:56:40"))
     # best_robot = ea.resume(Path("__data__/ea_run_2025_10_12_00:26:27"))
     robot = best_robot[0]
