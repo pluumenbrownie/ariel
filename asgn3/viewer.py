@@ -93,4 +93,4 @@ def view(dir_path: Path, generation: int, individual_number: int) -> None:
 
 
 if __name__ == "__main__":
-    view(Path("__data__/ea_run_2025_10_12_01:13:31"), 9, 0)
+    view(Path("__data__/ea_run_2025_10_12_01:26:59"), 40, 1)

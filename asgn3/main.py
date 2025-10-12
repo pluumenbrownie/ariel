@@ -34,7 +34,7 @@ from robots import (
     Brain,
     RandomBrain,
     SelfAdaptiveBrain,
-    # TrainingBrain,
+    TrainingBrain,
     # RandomRobotBody,
     SelfAdaptiveBody,
     Robot,
@@ -513,7 +513,7 @@ class EvolutionaryAlgorithm:
 
         return fitness
 
-    def load_bodies(self, path: Path) -> list[tuple[RobotBody, float]]:
+    def load_bodies(self, path: Path) -> list[BrainBodyFitness]:
         robot_bodies = []
         with open(path, "r") as file:
             data = json.load(file)
@@ -615,7 +615,7 @@ class EvolutionaryAlgorithm:
     ) -> BrainBodyFitness:
         input_size, output_size = self.get_input_output_sizes(robot_body)
         # create a random 'brain' for the robot using Class RandomBrain
-        brain = RandomBrain(input_size, output_size)
+        brain = TrainingBrain(input_size, output_size).random()
         result = self.experiment(robot_body, brain)
         return ((robot_body, result[0]), result[1])
 
@@ -646,7 +646,7 @@ def termination_function(time: float, robot: Robot) -> bool:
         return True
     # Early termination of fast bots, with fitness bonus
     if dx > 5.0:
-        robot.controller.tracker.history["bonus"] = max(time - 120.0, 0.0)
+        robot.controller.tracker.history["bonus"] = max(time - 120.0, 0.0)  # type: ignore
     return False
 
 
@@ -708,11 +708,10 @@ def import_nde(data: dict[str, Any]) -> NeuralDevelopmentalEncoding:
     return nde
 
 
-def main():
+def main() -> None:
     ea = EvolutionaryAlgorithm()
-    best_robot = ea.run_random(parallel=True)
-    # best_robot = ea.resume(Path("__data__/ea_run_2025_10_11_22:56:40"))
-    # best_robot = ea.resume(Path("__data__/ea_run_2025_10_12_00:26:27"))
+    # best_robot = ea.run_random(parallel=True)
+    best_robot = ea.resume(Path("__data__/ea_run_2025_10_12_01:26:59"))
     robot = best_robot[0]
     save_graph_as_json(robot[0].robot_graph, DATA / "robot_graph.json")
     json_data = json.dumps(robot[1].export(), indent=4)
