@@ -80,7 +80,7 @@ class EvolutionaryAlgorithm:
         self.dir_name = Path(
             f"__data__/ea_run_"
             + f"{now.tm_year}_{now.tm_mon:02}_{now.tm_mday:02}_"
-            + f"{now.tm_hour:02}:{now.tm_min:02}:{now.tm_sec:02}"
+            + f"{now.tm_hour:02}_{now.tm_min:02}_{now.tm_sec:02}"
         )
 
         self.nde = NeuralDevelopmentalEncoding(self.num_modules)
@@ -117,7 +117,7 @@ class EvolutionaryAlgorithm:
     ) -> BrainBodyFitness:
         if override:
             self.dir_name = path
-
+        print(path)    #ADDED CHECK
         files = sorted(os.listdir(path))
         assert "nde.json" in files, "No nde.json file found in folder."
         gen_files = [f for f in files if re.match(r"^gen_\d{4}.json$", f)]
@@ -552,7 +552,10 @@ class EvolutionaryAlgorithm:
             + f"{now.tm_year}_{now.tm_mon:02}_{now.tm_mday:02}_"
             + f"{now.tm_hour:02}:{now.tm_min:02}:{now.tm_sec:02}"
         )"""
+        
         baseline_dir = self.dir_name / "baseline"
+
+        baseline_dir.parent.mkdir(parents=True, exist_ok=True)
         os.mkdir(baseline_dir)
 
         plotter = LivePlotter(fitness, baseline_dir)
@@ -708,23 +711,14 @@ def import_nde(data: dict[str, Any]) -> NeuralDevelopmentalEncoding:
     return nde
 
 
-def main() -> None:
+def main():
     ea = EvolutionaryAlgorithm()
-<<<<<<< HEAD
     best_robot = ea.run_baseline(parallel=True)
-    # best_robot = ea.resume(Path("__data__/ea_run_2025_10_11_22:56:40"))
-    # best_robot = ea.resume(Path("__data__/ea_run_2025_10_12_00:26:27"))
-=======
-    # best_robot = ea.run_random(parallel=True)
-    best_robot = ea.resume(Path("__data__/ea_run_2025_10_12_01:26:59"))
->>>>>>> 8a628c8b81b2d51330444fbde633fc6e8d1bc5b2
     robot = best_robot[0]
     save_graph_as_json(robot[0].robot_graph, DATA / "robot_graph.json")
     json_data = json.dumps(robot[1].export(), indent=4)
     with Path(DATA / "brain.json").open("w", encoding="utf-8") as f:
         f.write(json_data)
-    # ea.run_single_brain(Path("asgn3/example_results"))
-
 
 if __name__ == "__main__":
     main()
