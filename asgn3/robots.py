@@ -2,7 +2,7 @@ from copy import deepcopy
 from typing import Any, Self
 from collections.abc import Callable, Sequence
 import mujoco
-from networkx import DiGraph
+from networkx import DiGraph  # type: ignore
 import numpy as np
 from numpy.typing import NDArray
 from rich.traceback import install
@@ -17,7 +17,7 @@ from ariel.utils.tracker import Tracker
 
 from rng import NP_RNG
 
-import networkx.readwrite.json_graph as json_graph
+import networkx.readwrite.json_graph as json_graph  # type: ignore
 import json
 
 install(width=180, show_locals=False)
@@ -121,6 +121,14 @@ class RandomRobotBody(RobotBody):
         if hasattr(other, "robot_graph"):
             return bool(self.robot_graph == other.robot_graph)
         raise NotImplementedError
+
+
+class ViewerBody(RandomRobotBody):
+    def __init__(
+        self,
+        graph: DiGraph,
+    ) -> None:
+        self.robot_graph = graph
 
 
 class SelfAdaptiveBody(RandomRobotBody):
@@ -346,7 +354,7 @@ class TrainingBrain(Brain):
 
         assert hasattr(left, "layers")
         assert hasattr(right, "layers")
-        assert hasattr(right, "other")
+        assert hasattr(other, "layers")
 
         P = 0.5
 
@@ -458,6 +466,7 @@ class Robot:
     def __init__(self, body: RobotBody, brain: Brain) -> None:
         self.body = body
         self.brain = brain
+        assert hasattr(body, "robot_graph")
         self.core = construct_mjspec_from_graph(body.robot_graph)
         self.tracker = self.get_tracker()
         self.controller = Controller(
@@ -465,7 +474,7 @@ class Robot:
             tracker=self.tracker,
         )
 
-    def get_tracker(self):
+    def get_tracker(self) -> Tracker:
         mujoco_type_to_find = mujoco.mjtObj.mjOBJ_GEOM
         name_to_bind = "core"
         tracker = Tracker(
@@ -475,10 +484,10 @@ class Robot:
         return tracker
 
     def fitness(self) -> float:
-        x_start = self.tracker.history["xpos"][0][0][0]
-        x = self.tracker.history["xpos"][0][-1][0]
-        y = self.tracker.history["xpos"][0][-1][1]
-        bonus = self.tracker.history["bonus"]
+        x_start: float = self.tracker.history["xpos"][0][0][0]
+        x: float = self.tracker.history["xpos"][0][-1][0]
+        y: float = self.tracker.history["xpos"][0][-1][1]
+        bonus: float = self.tracker.history["bonus"]  # type: ignore
         return x - x_start - max(abs(y) - 1, 0) + bonus
 
 

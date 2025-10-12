@@ -12,7 +12,7 @@ from ariel.simulation.environments.olympic_arena import OlympicArena
 
 from robots import (
     Robot,
-    RobotBody,
+    ViewerBody,
     BRAIN_TYPE_MAP,
 )
 
@@ -66,11 +66,8 @@ def view(dir_path: Path, generation: int, individual_number: int) -> None:
     print(f"Detected {len(gen_files)} generations.")
     if generation >= len(gen_files):
         raise ValueError(
-            f"Given generation to high for given folder: {generation} >= {len(gen_files)}"
+            f"Given generation to high for given folder: {generation} > {len(gen_files)-1}"
         )
-
-    # with open(dir_path.joinpath("nde.json"), "r") as file:
-    #     nde = import_nde(json.load(file))
 
     # load right file
     with open(dir_path.joinpath(f"gen_{generation:04}.json"), "r") as file:
@@ -82,9 +79,7 @@ def view(dir_path: Path, generation: int, individual_number: int) -> None:
 
     phenotype = json.loads(individual["body"]["phenotype"])
 
-    robot_body = RobotBody.from_graph(
-        networkx.node_link_graph(phenotype, edges="edges")
-    )
+    robot_body = ViewerBody(networkx.node_link_graph(phenotype, edges="edges"))
     robot_brain = BRAIN_TYPE_MAP[individual["brain"]["type"]].from_dict(
         individual["brain"]
     )
@@ -93,4 +88,4 @@ def view(dir_path: Path, generation: int, individual_number: int) -> None:
 
 
 if __name__ == "__main__":
-    view(Path("__data__/ea_run_2025_10_12_01:26:59"), 40, 1)
+    view(Path("__data__/ea_run_2025_10_12_01:26:59"), 41, 2)

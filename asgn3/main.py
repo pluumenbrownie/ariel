@@ -63,7 +63,7 @@ class EvolutionaryAlgorithm:
         self.genotype_size = 64
         self.body_generations = 1000
         self.body_population_size = 8
-        self.brain_generations = 50
+        self.brain_generations = 200
         self.brain_population_size = 100
 
         self.brain_survival_fraction = 0.05
@@ -300,9 +300,7 @@ class EvolutionaryAlgorithm:
             choice = RNG.choices(brains_fitness, weights=weights, k=2)
             p1 = choice[0][0]
             p2 = choice[1][0]
-            # c1, c2 = p1.crossover(p2)
-            c1 = p1.copy()
-            c2 = p2.copy()
+            c1, c2 = p1.crossover(p2)
             c1.mutation()
             c2.mutation()
             next_gen.append(c1)
@@ -525,6 +523,14 @@ class EvolutionaryAlgorithm:
             genotype_data = individual["body"]["genotype"]
             genotype = [np.array(lst) for lst in genotype_data]
             body = robot_type(genotype, num_modules, self.nde)
+            if isinstance(body, SelfAdaptiveBody):
+                assert len(body.adaptive_parameters) == len(
+                    individual["body"]["self_adaptive_parameters"]
+                )
+                for i in range(len(body.adaptive_parameters)):
+                    body.adaptive_parameters[i].weights = np.array(
+                        individual["body"]["self_adaptive_parameters"][i]
+                    )
 
             brain_type = BRAIN_TYPE_MAP[individual["brain"]["type"]]
             brain = brain_type.from_dict(individual["brain"])
