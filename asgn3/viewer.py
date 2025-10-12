@@ -10,11 +10,10 @@ from mujoco import MjData, viewer
 
 from ariel.simulation.environments.olympic_arena import OlympicArena
 
-from main import import_nde
 from robots import (
-    TrainingBrain,
     Robot,
     RobotBody,
+    BRAIN_TYPE_MAP,
 )
 
 
@@ -70,8 +69,8 @@ def view(dir_path: Path, generation: int, individual_number: int) -> None:
             f"Given generation to high for given folder: {generation} >= {len(gen_files)}"
         )
 
-    with open(dir_path.joinpath("nde.json"), "r") as file:
-        nde = import_nde(json.load(file))
+    # with open(dir_path.joinpath("nde.json"), "r") as file:
+    #     nde = import_nde(json.load(file))
 
     # load right file
     with open(dir_path.joinpath(f"gen_{generation:04}.json"), "r") as file:
@@ -86,10 +85,12 @@ def view(dir_path: Path, generation: int, individual_number: int) -> None:
     robot_body = RobotBody.from_graph(
         networkx.node_link_graph(phenotype, edges="edges")
     )
-    robot_brain = TrainingBrain.from_genotype(individual["brain"]["genotype"])
+    robot_brain = BRAIN_TYPE_MAP[individual["brain"]["type"]].from_dict(
+        individual["brain"]
+    )
 
     experiment(Robot(robot_body, robot_brain))
 
 
 if __name__ == "__main__":
-    view(Path("__data__/ea_run_2025_10_11_15:44:37"), 12, 3)
+    view(Path("__data__/ea_run_2025_10_12_01:13:31"), 9, 0)

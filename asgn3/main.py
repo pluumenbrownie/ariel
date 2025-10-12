@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import time
 from typing import Any
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Iterator, Sequence
 from multiprocessing import Pool
 import math as mt
 import re
@@ -30,11 +30,13 @@ from runners import complicated_runner
 from rng import RNG
 from robots import (
     TYPE_MAP,
+    BRAIN_TYPE_MAP,
     Brain,
     RandomBrain,
     SelfAdaptiveBrain,
     # TrainingBrain,
-    RandomRobotBody,
+    # RandomRobotBody,
+    SelfAdaptiveBody,
     Robot,
     RobotBody,
     TestBrain,
@@ -51,9 +53,12 @@ DATA = CWD / "__data__" / SCRIPT_NAME
 DATA.mkdir(exist_ok=True)
 
 
+type BrainBodyFitness = tuple[tuple[RobotBody, Brain], float]
+
+
 class EvolutionaryAlgorithm:
     def __init__(self) -> None:
-        self.processes = 12
+        self.processes = None
         self.num_modules = 20
         self.genotype_size = 64
         self.body_generations = 1000
@@ -61,16 +66,10 @@ class EvolutionaryAlgorithm:
         self.brain_generations = 50
         self.brain_population_size = 100
 
-        self.body_survival_fraction = 0.0
-        self.brain_survival_fraction = 0.01
+        self.brain_survival_fraction = 0.05
 
         self.viewer = False
         self.spawn_position = [-0.8, 0, 0.1]
-
-        self.body_children = mt.floor(
-            self.body_population_size * ((1 - self.body_survival_fraction) * 0.5)
-        )
-        self.body_keep = self.body_population_size - 2 * self.body_children
 
         self.brain_children = mt.floor(
             self.brain_population_size * ((1 - self.brain_survival_fraction) * 0.5)
@@ -87,12 +86,8 @@ class EvolutionaryAlgorithm:
         self.nde = NeuralDevelopmentalEncoding(self.num_modules)
 
         assert self.brain_population_size % 4 == 0, "Populations must be div. by 4."
-        assert self.body_population_size % 4 == 0, "Populations must be div. by 4."
-        assert self.body_keep + 2 * self.body_children == self.body_population_size
 
-    def run_random(
-        self, parallel: bool = True
-    ) -> tuple[tuple[RobotBody, Brain], float]:
+    def run_random(self, parallel: bool = True) -> BrainBodyFitness:
         print(f"Started EA run ({parallel = })")
         # Create body population
         robot_bodies = self.generate_bodies_preselect()
@@ -105,8 +100,13 @@ class EvolutionaryAlgorithm:
             output = export_nde(self.nde)
             json.dump(output, file)
 
+        # We pre-evaluate the first generation before entering it in
+        print(f"Gen 0")
+        bodies_fitness = self.evaluate_bodies(robot_bodies, parallel)
+        fitness[0, :] = [fitness_key(r) for r in bodies_fitness]
+        self.save_state(0, bodies_fitness)
         best_bot = self.run_generations(
-            parallel, robot_bodies, fitness, range(self.body_generations), plotter
+            parallel, bodies_fitness, fitness, range(1, self.body_generations), plotter
         )
         print(fitness)
 
@@ -114,7 +114,7 @@ class EvolutionaryAlgorithm:
 
     def resume(
         self, path: Path, override: bool = True, parallel: bool = True
-    ) -> tuple[tuple[RobotBody, Brain], float]:
+    ) -> BrainBodyFitness:
         if override:
             self.dir_name = path
 
@@ -129,14 +129,9 @@ class EvolutionaryAlgorithm:
         plotter = LivePlotter(fitness, self.dir_name)
         bodies_fitness = self.load_bodies(path.joinpath(gen_files[-1]))
 
-        weights = self.linear_windowed_weights(bodies_fitness)
-        robot_bodies = self.children_bodies(
-            [((body, ()), fit) for body, fit in bodies_fitness], weights
-        )
-
         best_bot = self.run_generations(
             parallel,
-            robot_bodies,
+            bodies_fitness,
             fitness,
             range(len(gen_files), self.body_generations),
             plotter,
@@ -145,9 +140,7 @@ class EvolutionaryAlgorithm:
 
         return best_bot
 
-    def run_single_brain(
-        self, path: Path, parallel: bool = True
-    ) -> tuple[tuple[RobotBody, Brain], float]:
+    def run_single_brain(self, path: Path, parallel: bool = True) -> BrainBodyFitness:
         self.dir_name = path
 
         files = sorted(os.listdir(path))
@@ -171,48 +164,59 @@ class EvolutionaryAlgorithm:
     def run_generations(
         self,
         parallel: bool,
-        robot_bodies: list[RobotBody],
+        robot_bodies: list[BrainBodyFitness],
         fitness: NDArray[np.float32],
         generations: Iterator[int],
         plotter: LivePlotter,
-    ) -> tuple[tuple[RobotBody, Brain], float]:
+    ) -> BrainBodyFitness:
         for generation in generations:
             print(f"Gen {generation}")
-            # Use multiprocessing to speed up computations
+            # Create children for given population
+            weights = self.exponential_ranking_weights(robot_bodies)
+            children = self.children_bodies(robot_bodies, weights)
+            children_fitness = self.evaluate_bodies(children, parallel)
 
-            bodies_fitness = list(
-                tqdm(
-                    (
-                        self.evolve_brains(body, parallel=parallel)
-                        for body in robot_bodies
-                    ),
-                    total=self.body_population_size,
-                )
-            )
+            # Select the best of the children and parents
+            robot_bodies.extend(children_fitness)
+            robot_bodies.sort(key=fitness_key, reverse=True)
+            robot_bodies = robot_bodies[: self.body_population_size]
 
-            bodies_fitness.sort(key=fitness_key, reverse=True)
-            best_robot = bodies_fitness[0]
+            best_robot = robot_bodies[0]
             print(f"Best robot fitness: {best_robot[1]}")
 
-            self.save_state(generation, bodies_fitness)
-            fitness[generation, :] = [r[1] for r in bodies_fitness]
+            self.save_state(generation, robot_bodies)
+            fitness[generation, :] = [r[1] for r in robot_bodies]
             plotter.plot()
 
             if generation == self.body_generations - 1:
                 return best_robot
 
-            weights = self.exponential_ranking_weights(bodies_fitness)
-            next_gen = self.children_bodies(bodies_fitness, weights)
-            robot_bodies = next_gen
-
         raise ValueError("self.brain_generations must be at least 1.")
+
+    def evaluate_bodies(
+        self,
+        robot_bodies: list[RobotBody],
+        parallel: bool,
+    ) -> list[BrainBodyFitness]:
+        bodies_fitness: list[BrainBodyFitness] = []
+        best_fitness = 0.0
+        progress_bar = tqdm(robot_bodies, desc=f"Best child body: {best_fitness:.3}")
+        for body in progress_bar:
+            result = self.evolve_brains(body, parallel=parallel)
+            bodies_fitness.append(result)
+            best_fitness = max(best_fitness, result[1])
+            progress_bar.set_description_str(f"Best child body: {best_fitness:.3}")
+        progress_bar.close()
+
+        bodies_fitness.sort(key=fitness_key, reverse=True)
+        return bodies_fitness
 
     def evolve_brains(
         self,
         robot_body: RobotBody,
         fitness: NDArray[np.float32] | None = None,
         parallel: bool = True,
-    ) -> tuple[tuple[RobotBody, Brain], float]:
+    ) -> BrainBodyFitness:
         # The bodies get fresh new brains at the start of learning
 
         brains = self.generate_brains(robot_body)
@@ -223,51 +227,56 @@ class EvolutionaryAlgorithm:
                 (self.brain_generations, self.brain_population_size), dtype=np.float32
             )
 
-        # experiment = partial(self.experiment, robot_body=robot_body)
-        progress_bar = tqdm(range(self.brain_generations), leave=False)
-        for generation in progress_bar:
+        with Pool(processes=self.processes) as pool:
+            # experiment = partial(self.experiment, robot_body=robot_body)
+            progress_bar = tqdm(
+                range(self.brain_generations), leave=False, desc=f"Best={0.0:.3}"
+            )
+            for generation in progress_bar:
 
-            if parallel:
-                with Pool(processes=self.processes) as pool:
-
+                if parallel:
                     brains_fitness: list[tuple[Brain, float]] = list(
-                        pool.starmap(self.experiment, zip(repeat(robot_body), brains))
+                        pool.starmap(
+                            self.experiment,
+                            zip(repeat(robot_body), brains),
+                            chunksize=10,
+                        )
                     )
-            else:
-                brains_fitness: list[tuple[Brain, float]] = list(
-                    map(self.experiment, repeat(robot_body), brains)
-                )
+                else:
+                    brains_fitness: list[tuple[Brain, float]] = list(
+                        map(self.experiment, repeat(robot_body), brains)
+                    )
 
-            brains_fitness.sort(key=fitness_key, reverse=True)
-            best_brain = brains_fitness[0]
-            fitness[generation, :] = [pair[1] for pair in brains_fitness]
+                brains_fitness.sort(key=fitness_key, reverse=True)
+                best_brain = brains_fitness[0]
+                progress_bar.set_description_str(f"Best={best_brain[1]:.3}")
+                fitness[generation, :] = [pair[1] for pair in brains_fitness]
 
-            # solves a type hinting problem
-            if generation == self.brain_generations - 1:
-                progress_bar.close()
-                return ((robot_body, best_brain[0]), best_brain[1])
-            # Stop early if brain fitness is not changing
-            # I think this is a good idea, well see
-            if generation > 4:
-                last_five_fitness = np.average(
-                    fitness[generation - 4 : generation, :], axis=1
-                )
-                largest_fitness_change = np.max(np.abs(np.diff(last_five_fitness)))
-                if largest_fitness_change < 0.0005:
+                # solves a type hinting problem
+                if generation == self.brain_generations - 1:
                     progress_bar.close()
                     return ((robot_body, best_brain[0]), best_brain[1])
+                # Stop early if brain fitness is not changing
+                if generation > 4:
+                    last_five_fitness = np.average(
+                        fitness[generation - 4 : generation, :], axis=1
+                    )
+                    largest_fitness_change = np.max(np.abs(np.diff(last_five_fitness)))
+                    if largest_fitness_change < 0.0005:
+                        progress_bar.close()
+                        return ((robot_body, best_brain[0]), best_brain[1])
 
-            weights = self.exponential_ranking_weights(brains_fitness)
+                weights = self.exponential_ranking_weights(brains_fitness)
 
-            next_gen = self.children_brains(brains_fitness, weights)
-            brains = next_gen
+                next_gen = self.children_brains(brains_fitness, weights)
+                brains = next_gen
 
         raise ValueError("self.brain_generations must be at least 1.")
 
     def save_state(
         self,
         generation: int,
-        bodies_fitness: list[tuple[tuple[RobotBody, Brain], float]],
+        bodies_fitness: list[BrainBodyFitness],
     ) -> None:
         generation_state = []
         for bot in bodies_fitness:
@@ -304,11 +313,11 @@ class EvolutionaryAlgorithm:
 
     def children_bodies(
         self,
-        bodies_fitness: list[tuple[tuple[RobotBody, Brain], float]],
+        bodies_fitness: list[BrainBodyFitness],
         weights: NDArray[np.float32],
     ) -> list[RobotBody]:
         next_gen: list[RobotBody] = []
-        for _ in range(self.body_children):
+        for _ in range(self.body_population_size // 2):
             choice = RNG.choices(bodies_fitness, weights=weights, k=2)
 
             p1: RobotBody = choice[0][0][0]
@@ -319,7 +328,6 @@ class EvolutionaryAlgorithm:
             next_gen.append(c1)
             next_gen.append(c2)
 
-        next_gen.extend([c[0][0].copy() for c in bodies_fitness[: self.body_keep]])
         return next_gen
 
     def generate_brains(self, robot_body: RobotBody) -> Sequence[Brain]:
@@ -337,7 +345,7 @@ class EvolutionaryAlgorithm:
             for _ in range(self.body_population_size)
         ]
         robot_bodies = [
-            RandomRobotBody(body_genotype, self.num_modules, self.nde)
+            SelfAdaptiveBody(body_genotype, self.num_modules, self.nde)
             for body_genotype in body_genotypes
         ]
 
@@ -349,7 +357,7 @@ class EvolutionaryAlgorithm:
         body_genotypes = []
         while len(body_genotypes) < self.body_population_size:
             genotype = random_body_genotype(self.genotype_size)
-            body = RandomRobotBody(genotype, self.num_modules, self.nde)
+            body = SelfAdaptiveBody(genotype, self.num_modules, self.nde)
             input_size, output_size = self.get_input_output_sizes(body)
             brain = RandomBrain(input_size, output_size)
             result = self.experiment(body, brain, duration=3, mode="complicated")
@@ -358,7 +366,7 @@ class EvolutionaryAlgorithm:
                 progress_bar.update()
 
         robot_bodies = [
-            RandomRobotBody(body_genotype, self.num_modules, self.nde)
+            SelfAdaptiveBody(body_genotype, self.num_modules, self.nde)
             for body_genotype in body_genotypes
         ]
 
@@ -510,14 +518,17 @@ class EvolutionaryAlgorithm:
         with open(path, "r") as file:
             data = json.load(file)
         for individual in data:
+            fitness = individual["fitness"]
+            num_modules = individual["body"]["num_modules"]
+
             robot_type = TYPE_MAP[individual["body"]["type"]]
             genotype_data = individual["body"]["genotype"]
             genotype = [np.array(lst) for lst in genotype_data]
-            num_modules = individual["body"]["num_modules"]
-
-            fitness = individual["fitness"]
             body = robot_type(genotype, num_modules, self.nde)
-            robot_bodies.append((body, fitness))
+
+            brain_type = BRAIN_TYPE_MAP[individual["brain"]["type"]]
+            brain = brain_type.from_dict(individual["brain"])
+            robot_bodies.append(((body, brain), fitness))
 
         return robot_bodies
 
@@ -525,9 +536,7 @@ class EvolutionaryAlgorithm:
       BASELINE experiment: random search for non-evolution of brain and body
     """
 
-    def run_baseline(
-        self, parallel: bool = True
-    ) -> tuple[tuple[RobotBody, Brain], float]:
+    def run_baseline(self, parallel: bool = True) -> BrainBodyFitness:
         """
         Baseline experiment: Pure random search with no evolution.
         Each generation gets completely new random bodies and random brains.
@@ -553,7 +562,7 @@ class EvolutionaryAlgorithm:
             output = export_nde(self.nde)
             json.dump(output, file)
 
-        best_overall: tuple[tuple[RobotBody, Brain], float] | None = None
+        best_overall: BrainBodyFitness | None = None
 
         for generation in range(self.body_generations):
             print(f"Baseline Gen {generation}")
@@ -603,7 +612,7 @@ class EvolutionaryAlgorithm:
     def evaluate_random_brain(
         self,
         robot_body: RobotBody,
-    ) -> tuple[tuple[RobotBody, Brain], float]:
+    ) -> BrainBodyFitness:
         input_size, output_size = self.get_input_output_sizes(robot_body)
         # create a random 'brain' for the robot using Class RandomBrain
         brain = RandomBrain(input_size, output_size)
@@ -613,7 +622,7 @@ class EvolutionaryAlgorithm:
     def save_state_baseline(
         self,
         generation: int,
-        bodies_fitness: list[tuple[tuple[RobotBody, Brain], float]],
+        bodies_fitness: list[BrainBodyFitness],
         directory: Path,
     ) -> None:
         generation_state = []
@@ -702,12 +711,13 @@ def import_nde(data: dict[str, Any]) -> NeuralDevelopmentalEncoding:
 def main():
     ea = EvolutionaryAlgorithm()
     best_robot = ea.run_random(parallel=True)
+    # best_robot = ea.resume(Path("__data__/ea_run_2025_10_11_22:56:40"))
+    # best_robot = ea.resume(Path("__data__/ea_run_2025_10_12_00:26:27"))
     robot = best_robot[0]
     save_graph_as_json(robot[0].robot_graph, DATA / "robot_graph.json")
     json_data = json.dumps(robot[1].export(), indent=4)
     with Path(DATA / "brain.json").open("w", encoding="utf-8") as f:
         f.write(json_data)
-    # ea.resume(Path("__data__/ea_run_2025_10_08_18:23:14"))
     # ea.run_single_brain(Path("asgn3/example_results"))
 
 

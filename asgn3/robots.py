@@ -1,6 +1,6 @@
 from copy import deepcopy
 from typing import Any, Self
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 import mujoco
 from networkx import DiGraph
 import numpy as np
@@ -35,7 +35,7 @@ class RobotBody:
         self.nde = nde
 
     def copy(self) -> "RobotBody":
-        new_genotype = np.copy(self.genotype)
+        new_genotype = [np.copy(arr) for arr in self.genotype]
         return type(self)(new_genotype, self.num_modules, self.nde)
 
     def mutation(self) -> Self:
@@ -59,7 +59,7 @@ class RobotBody:
         :rtype: list[Brain]
         """
         left = self.copy()
-        right = self.copy()
+        right = other.copy()
 
         P = 0.5
 
@@ -87,7 +87,7 @@ class RobotBody:
 
     @classmethod
     def from_graph(cls, graph: Any) -> Self:
-        body = cls(None, None, None)
+        body = cls(None, None, None)  # type: ignore
         body.robot_graph = graph
         return body
 
@@ -112,6 +112,50 @@ class RandomRobotBody(RobotBody):
 
     def __eq__(self, other: object) -> bool:
         return self.robot_graph == other.robot_graph
+
+
+class SelfAdaptiveBody(RandomRobotBody):
+    def __init__(
+        self,
+        body_genotype: list[NDArray[np.float32]],
+        num_modules: int,
+        nde: NeuralDevelopmentalEncoding,
+    ) -> None:
+        super().__init__(body_genotype, num_modules, nde)
+
+        self.adaptive_parameters: list[SelfAdaptiveParameters] = [
+            SelfAdaptiveParameters(g.shape[0]) for g in self.genotype
+        ]
+        self.weight_amount = sum([g.shape[0] for g in self.genotype])
+
+    def export(self) -> dict[str, Any]:
+        output = super().export()
+        output["self_adaptive_parameters"] = [
+            sigma.weights.tolist() for sigma in self.adaptive_parameters
+        ]
+        return output
+
+    def copy(self) -> "RobotBody":
+        new = super().copy()
+        new.adaptive_parameters = [
+            deepcopy(sigma) for sigma in self.adaptive_parameters
+        ]
+        return new
+
+    def mutation(self) -> Self:
+        tau_prime = 1 / np.sqrt(2 * self.weight_amount)
+        tau = 1 / np.sqrt(2 * np.sqrt(self.weight_amount))
+        [
+            sigma.update(
+                tau_prime,
+                tau,
+            )
+            for sigma in self.adaptive_parameters
+        ]
+        for arr, sigma in zip(self.genotype, self.adaptive_parameters):
+            arr += sigma.weights * NP_RNG.normal(scale=0.1, size=arr.shape)
+
+        return self
 
 
 class Layer:
@@ -262,20 +306,21 @@ class TrainingBrain(Brain):
         return self
 
     @classmethod
-    def from_genotype(cls, genotype: list[dict[str, Any]]) -> Self:
-        brain = cls(0, 0)
+    def from_dict(cls, input_dict: dict[str, Any]) -> Self:
 
-        brain.layers = []
+        genotype: list[dict[str, Any]] = input_dict["genotype"]
+        layers = []
         for gene in genotype:
             assert (
                 gene["activation_function"] == "tanh"
             ), f"Incorrect function name {gene["activation_function"]}."
             arr = np.array(gene["weights"])
-            # print(arr)
             layer = Layer(*arr.shape, function=np.tanh)
             layer.weights = arr
-            brain.layers.append(layer)
-
+            layers.append(layer)
+        input_size = layers[0].input_size
+        output_size = layers[-1].output_size
+        brain = cls(input_size, output_size)
         return brain
 
     def crossover(self, other: "Brain") -> list["Brain"]:
@@ -323,9 +368,9 @@ class SelfAdaptiveBrain(TrainingBrain):
     def __init__(self, input_size: int, output_size: int) -> None:
         super().__init__(input_size, output_size)
         self.self_adaptive_parameters = [
-            SelfAdaptiveParameters(input_size, 25),
-            SelfAdaptiveParameters(25, 25),
-            SelfAdaptiveParameters(25, output_size),
+            SelfAdaptiveParameters((input_size, 25)),
+            SelfAdaptiveParameters((25, 25)),
+            SelfAdaptiveParameters((25, output_size)),
         ]
         self.weight_amount = input_size * 25 + 25 * 25 + 25 * output_size
 
@@ -354,7 +399,7 @@ class SelfAdaptiveBrain(TrainingBrain):
     def copy(self) -> Brain:
         new = SelfAdaptiveBrain(self.layers[0].input_size, self.layers[-1].output_size)
         new.layers = [deepcopy(layer) for layer in self.layers]
-        new.self_adaptive_parameters = self.self_adaptive_parameters
+        new.self_adaptive_parameters = deepcopy(self.self_adaptive_parameters)
         return new
 
     def export(self) -> dict[str, Any]:
@@ -363,20 +408,31 @@ class SelfAdaptiveBrain(TrainingBrain):
         output["self_adaptive_parameters"] = [
             sigma.weights.tolist() for sigma in self.self_adaptive_parameters
         ]
+        if [] in output["self_adaptive_parameters"]:
+            raise ValueError
         return output
+
+    @classmethod
+    def from_genotype(cls, input_dict: dict[str, Any]) -> Self:
+        brain = super().from_dict(input_dict)
+        sigmas = input_dict["self_adaptive_parameters"]
+        brain.self_adaptive_parameters = []
+        for sigma in sigmas:
+            assert len(sigma) > 0, f"Bad array detected."
+            arr = np.array(sigma)
+            new_params = SelfAdaptiveParameters(arr.shape)
+            new_params.weights = arr
+            brain.layers.append(new_params)
+        return brain
 
 
 class SelfAdaptiveParameters:
     def __init__(
         self,
-        input_size: int,
-        output_size: int,
+        shape: Sequence[int],
     ) -> None:
-        self.input_size = input_size
-        self.output_size = output_size
-        self.weights = np.full(
-            shape=(input_size, output_size), fill_value=0.01, dtype=np.float32
-        )
+        self.shape = shape
+        self.weights = np.full(shape=self.shape, fill_value=0.01, dtype=np.float32)
         self.adaptive_minimum = 0.01
 
     def update(self, tau_prime: float, tau: float) -> None:
@@ -436,4 +492,9 @@ def random_body_genotype(genotype_size: int) -> list[NDArray[np.float32]]:
 
 TYPE_MAP = {
     "RandomRobotBody": RandomRobotBody,
+    "SelfAdaptiveBody": SelfAdaptiveBody,
+}
+BRAIN_TYPE_MAP = {
+    "TrainingBrain": TrainingBrain,
+    "SelfAdaptiveBrain": SelfAdaptiveBrain,
 }
