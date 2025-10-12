@@ -34,7 +34,7 @@ class RobotBody:
         self.num_modules = num_modules
         self.nde = nde
 
-    def copy(self) -> "RobotBody":
+    def copy(self) -> Self:
         new_genotype = [np.copy(arr) for arr in self.genotype]
         return type(self)(new_genotype, self.num_modules, self.nde)
 
@@ -75,21 +75,11 @@ class RobotBody:
         return [left, right]
 
     def export(self) -> dict[str, Any]:
-        """Fyi RandomBrain doesnt work with this yet."""
-        data = json_graph.node_link_data(self.robot_graph, edges="edges")
-        json_string = json.dumps(data, indent=4)
-        return {
-            "type": str(type(self).__name__),
-            "phenotype": json_string,
-            "genotype": [vec.tolist() for vec in self.genotype],
-            "num_modules": self.num_modules,
-        }
+        raise NotImplementedError
 
     @classmethod
     def from_graph(cls, graph: Any) -> Self:
-        body = cls(None, None, None)  # type: ignore
-        body.robot_graph = graph
-        return body
+        raise NotImplementedError
 
 
 class RandomRobotBody(RobotBody):
@@ -110,8 +100,27 @@ class RandomRobotBody(RobotBody):
             p_matrices[2],
         )
 
+    def export(self) -> dict[str, Any]:
+        """Fyi RandomBrain doesnt work with this yet."""
+        data = json_graph.node_link_data(self.robot_graph, edges="edges")
+        json_string = json.dumps(data, indent=4)
+        return {
+            "type": str(type(self).__name__),
+            "phenotype": json_string,
+            "genotype": [vec.tolist() for vec in self.genotype],
+            "num_modules": self.num_modules,
+        }
+
+    @classmethod
+    def from_graph(cls, graph: Any) -> Self:
+        body = cls(None, None, None)  # type: ignore
+        body.robot_graph = graph
+        return body
+
     def __eq__(self, other: object) -> bool:
-        return self.robot_graph == other.robot_graph
+        if hasattr(other, "robot_graph"):
+            return bool(self.robot_graph == other.robot_graph)
+        raise NotImplementedError
 
 
 class SelfAdaptiveBody(RandomRobotBody):
@@ -135,7 +144,7 @@ class SelfAdaptiveBody(RandomRobotBody):
         ]
         return output
 
-    def copy(self) -> "RobotBody":
+    def copy(self) -> "SelfAdaptiveBody":
         new = super().copy()
         new.adaptive_parameters = [
             deepcopy(sigma) for sigma in self.adaptive_parameters
@@ -145,13 +154,9 @@ class SelfAdaptiveBody(RandomRobotBody):
     def mutation(self) -> Self:
         tau_prime = 1 / np.sqrt(2 * self.weight_amount)
         tau = 1 / np.sqrt(2 * np.sqrt(self.weight_amount))
-        [
-            sigma.update(
-                tau_prime,
-                tau,
-            )
-            for sigma in self.adaptive_parameters
-        ]
+        for sigma in self.adaptive_parameters:
+            sigma.update(tau_prime, tau)
+
         for arr, sigma in zip(self.genotype, self.adaptive_parameters):
             arr += sigma.weights * NP_RNG.normal(scale=0.1, size=arr.shape)
 
@@ -171,7 +176,9 @@ class Layer:
         self.function = function
 
     def random(self) -> Self:
-        self.weights = NP_RNG.standard_normal((self.input_size, self.output_size))
+        self.weights = NP_RNG.standard_normal(
+            (self.input_size, self.output_size), dtype=np.float32
+        )
         return self
 
     def forward(self, inputs: np.ndarray) -> np.ndarray:
@@ -221,7 +228,7 @@ class Brain:
         """Fyi RandomBrain doesnt work with this yet."""
         return {
             "type": str(type(self).__name__),
-            "genotype": [layer.export() for layer in self.layers],
+            "genotype": [layer.export() for layer in self.layers],  # type: ignore
         }
 
 
@@ -230,8 +237,8 @@ class TestBrain(Brain):
 
     def __init__(self) -> None:
         super().__init__(input_size=0, output_size=0)
-        self.input_size = None
-        self.output_size = None
+        self.input_size = 0
+        self.output_size = 0
 
     def __call__(self, model: mujoco.MjModel, data: mujoco.MjData) -> Any:
         self.input_size = len(data.qpos)
@@ -307,7 +314,6 @@ class TrainingBrain(Brain):
 
     @classmethod
     def from_dict(cls, input_dict: dict[str, Any]) -> Self:
-
         genotype: list[dict[str, Any]] = input_dict["genotype"]
         layers = []
         for gene in genotype:
@@ -315,12 +321,13 @@ class TrainingBrain(Brain):
                 gene["activation_function"] == "tanh"
             ), f"Incorrect function name {gene["activation_function"]}."
             arr = np.array(gene["weights"])
-            layer = Layer(*arr.shape, function=np.tanh)
+            layer = Layer(*arr.shape, function=np.tanh)  # type: ignore
             layer.weights = arr
             layers.append(layer)
         input_size = layers[0].input_size
         output_size = layers[-1].output_size
         brain = cls(input_size, output_size)
+        brain.layers = layers
         return brain
 
     def crossover(self, other: "Brain") -> list["Brain"]:
@@ -336,6 +343,10 @@ class TrainingBrain(Brain):
         """
         left = self.copy()
         right = other.copy()
+
+        assert hasattr(left, "layers")
+        assert hasattr(right, "layers")
+        assert hasattr(right, "other")
 
         P = 0.5
 
@@ -381,13 +392,8 @@ class SelfAdaptiveBrain(TrainingBrain):
     def mutation(self) -> Self:
         tau_prime = 1 / np.sqrt(2 * self.weight_amount)
         tau = 1 / np.sqrt(2 * np.sqrt(self.weight_amount))
-        [
-            sigma.update(
-                tau_prime,
-                tau,
-            )
-            for sigma in self.self_adaptive_parameters
-        ]
+        for sigma in self.self_adaptive_parameters:
+            sigma.update(tau_prime, tau)
 
         for layer, sigma in zip(self.layers, self.self_adaptive_parameters):
             layer.weights += sigma.weights * NP_RNG.normal(
@@ -413,7 +419,7 @@ class SelfAdaptiveBrain(TrainingBrain):
         return output
 
     @classmethod
-    def from_genotype(cls, input_dict: dict[str, Any]) -> Self:
+    def from_dict(cls, input_dict: dict[str, Any]) -> Self:
         brain = super().from_dict(input_dict)
         sigmas = input_dict["self_adaptive_parameters"]
         brain.self_adaptive_parameters = []
@@ -422,7 +428,7 @@ class SelfAdaptiveBrain(TrainingBrain):
             arr = np.array(sigma)
             new_params = SelfAdaptiveParameters(arr.shape)
             new_params.weights = arr
-            brain.layers.append(new_params)
+            brain.self_adaptive_parameters.append(new_params)
         return brain
 
 
